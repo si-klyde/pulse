@@ -18,6 +18,12 @@
 
 ---
 
+> [!NOTE]
+> **This is a fork** of [keiretrogaming/pulse](https://github.com/keiretrogaming/pulse) (upstream v1.19.6).
+> It is not the official PULSE. Changes are tracked in [PROGRESS.md](PROGRESS.md). Builds from this repo are
+> signed with a different key, so installing one requires uninstalling the upstream APK first (export your
+> profiles before you do). Bugs in this fork go here, not to the upstream tracker.
+
 ## What is PULSE?
 
 I kept wanting two things from my handheld that felt mutually exclusive: **good, sustained frame rates** and **a battery that lasts (and a fan that isn't screaming).** Stock firmware gives you a couple of blunt "performance modes" and calls it a day. I wanted a knob for everything — and something smart enough to turn those knobs for me, per game, in real time.

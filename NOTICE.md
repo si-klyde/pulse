@@ -2,6 +2,13 @@
 
 PULSE is licensed under the **GNU General Public License v2.0** (see `LICENSE`).
 
+## This fork
+
+This repository (si-klyde/pulse) is a fork of **PULSE** by keiretrogaming
+(https://github.com/keiretrogaming/pulse), forked 2026-09-09 at upstream v1.19.6 (`0d2893e`).
+Modified files and dates are recorded in git history and summarised in `PROGRESS.md`, per GPL v2 §2(a).
+Fork changes are © 2026 the fork author and released under the same GPL v2.0 (or later) terms.
+
 ## Derived from ClusterTune
 
 PULSE is a fork of **ClusterTune** by AurelioB, which is also licensed under GPL v2.0.
