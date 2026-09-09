@@ -103,6 +103,7 @@ class ForegroundAppMonitorService : Service() {
     private val governorController = GovernorController()
     private val telemetryReader = TelemetryReader()
     private val fpsReader by lazy { FpsReader(this) }
+    private val sessionRecorder by lazy { SessionRecorder(this) }
     private val overlay by lazy { PerformanceOverlay(this) }
     private val quickAccess by lazy { QuickAccessOverlay(this) }
     private var comboJob: Job? = null // getevent detect loop for the Quick Access combo (when set + enabled)
@@ -601,6 +602,7 @@ class ForegroundAppMonitorService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        runCatching { sessionRecorder.finish() }
         overlay.hide()
         quickAccess.hide()
         comboJob?.cancel()
@@ -790,6 +792,7 @@ class ForegroundAppMonitorService : Service() {
                 active = settings.quickAccessEnabled && QuickAccessOverlay.hasPermission(this) && screenOn,
             )
             if (!overlayShouldShow && !autoActive && !quickAccessShouldShow) {
+                sessionRecorder.idle()
                 if (overlay.isShowing) hideOverlay()
                 if (quickAccess.isShowing) quickAccess.hide()
                 ensureQuickAccessSettingsFeed(false)
@@ -803,6 +806,15 @@ class ForegroundAppMonitorService : Service() {
             // working, so idle/menu/paused time can't poison the battery-life estimate.
             lastActiveLoadPercent = maxOf(telemetry.cpuLoadPercent ?: 0, telemetry.gpuLoadPercent ?: 0)
             val fps = fpsReader.read(osdTarget) // FPS for the OSD target (works for standalone-overlay apps too)
+            // Session recap for the home screen: one sample per tick from the reads above, no extra I/O.
+            if (osdTarget != null && !isNeutralForeground(osdTarget) && !neutralForeground) {
+                sessionRecorder.sample(
+                    osdTarget, fps, telemetry,
+                    targetFps = com.kei.pulse.overlay.QuickAccessPerApp.effectiveFps(boundConfig, settings.autoTdpFpsTarget),
+                )
+            } else {
+                sessionRecorder.idle()
+            }
             val auto = if (autoActive) buildAutoReadout(policies, telemetry) else null
             // Keep the HUD/QA profile banner live: the bound mode can change mid-session (a Quick Access preset
             // switch, an AutoTDP stop) WITHOUT re-showing the overlay, so recompute the label every tick instead

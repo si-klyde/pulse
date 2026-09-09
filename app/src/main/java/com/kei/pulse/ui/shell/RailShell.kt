@@ -25,6 +25,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.kei.pulse.data.TelemetrySnapshot
 import com.kei.pulse.model.CpuPolicyInfo
+import com.kei.pulse.model.GameSession
 import com.kei.pulse.overlay.MeterHot
 import com.kei.pulse.ui.theme.Housing
 import com.kei.pulse.ui.theme.Ink
@@ -42,8 +43,8 @@ private val LiveWidth = 204.dp
 private val HeaderHeight = 100.dp
 
 /**
- * The fixed RP6 shell: header (title + status, hero trace, live fps/ms/W), a six-item rail, the section
- * slot, and the always-visible live column. Nothing here scrolls; sections manage their own overflow.
+ * The fixed RP6 shell: header (title + status, the session trace with its recap readouts), a six-item rail,
+ * the section slot, and the always-visible live column. Nothing here scrolls; sections manage their own overflow.
  */
 @Composable
 fun RailShell(
@@ -51,40 +52,29 @@ fun RailShell(
     onSelectSection: (Section) -> Unit,
     statusLine1: String,
     statusLine2: String,
-    frameTimesMs: List<Float>,
-    drawWatts: List<Float>,
-    targetFps: Int,
-    currentFps: Float?,
-    currentDrawW: Float?,
+    session: GameSession?,
     telemetry: TelemetrySnapshot,
     policies: List<CpuPolicyInfo>,
     fanPercent: Int?,
     batteryTimeLeft: String?,
+    plugged: Boolean,
     content: @Composable () -> Unit,
 ) {
     Column(Modifier.fillMaxSize().background(Housing).statusBarsPadding()) {
-        Header(statusLine1, statusLine2, frameTimesMs, drawWatts, targetFps, currentFps, currentDrawW)
+        Header(statusLine1, statusLine2, session)
         Box(Modifier.fillMaxWidth().height(1.dp).background(Rule))
         Row(Modifier.fillMaxSize()) {
             Rail(section, onSelectSection)
             Box(Modifier.width(1.dp).fillMaxHeight().background(Rule))
             Box(Modifier.weight(1f).fillMaxHeight()) { content() }
             Box(Modifier.width(1.dp).fillMaxHeight().background(Rule))
-            LiveColumn(telemetry, policies, fanPercent, batteryTimeLeft, Modifier.width(LiveWidth))
+            LiveColumn(telemetry, policies, fanPercent, batteryTimeLeft, plugged, Modifier.width(LiveWidth))
         }
     }
 }
 
 @Composable
-private fun Header(
-    line1: String,
-    line2: String,
-    frameTimesMs: List<Float>,
-    drawWatts: List<Float>,
-    targetFps: Int,
-    currentFps: Float?,
-    currentDrawW: Float?,
-) {
+private fun Header(line1: String, line2: String, session: GameSession?) {
     Row(Modifier.fillMaxWidth().height(HeaderHeight)) {
         Column(
             Modifier.width(RailWidth).fillMaxHeight().padding(start = 20.dp),
@@ -97,35 +87,67 @@ private fun Header(
         }
         Box(Modifier.width(1.dp).fillMaxHeight().background(Rule))
         Box(Modifier.weight(1f).fillMaxHeight()) {
-            val targetMs = if (targetFps > 0) 1000f / targetFps else 16.7f
-            HeroTrace(frameTimesMs, drawWatts, targetMs, Modifier.fillMaxSize().padding(top = 4.dp))
+            val targetMs = session?.targetFps?.takeIf { it > 0 }?.let { 1000f / it } ?: 16.7f
+            if (session != null) {
+                HeroTrace(
+                    frameTimesMs = session.samples.map { it.frameMs },
+                    drawWatts = session.samples.map { it.drawW },
+                    targetMs = targetMs,
+                    live = session.isLive,
+                    modifier = Modifier.fillMaxSize().padding(top = 4.dp),
+                )
+            }
             Row(
                 Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Text("Frame time · last 60 s", style = PulseTypography.labelSmall, color = Ink3)
-                Text("grey · power draw", style = PulseTypography.labelSmall, color = Ink4)
+                if (session == null) {
+                    Text("No game session yet. Play something and its recap shows here.", style = PulseTypography.labelSmall, color = Ink3)
+                } else {
+                    Text(session.label, style = PulseTypography.labelMedium, color = Ink)
+                    Text(sessionMeta(session), style = PulseTypography.labelSmall, color = Ink3)
+                    Text("grey · power draw", style = PulseTypography.labelSmall, color = Ink4)
+                }
             }
-            Row(
-                Modifier.align(Alignment.TopEnd).padding(end = 16.dp, top = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(18.dp),
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                val ms = currentFps?.takeIf { it > 0f }?.let { 1000f / it }
-                BigReadout(currentFps?.let { String.format(java.util.Locale.US, "%.0f", it) } ?: "—", "fps")
-                BigReadout(ms?.let { String.format(java.util.Locale.US, "%.1f", it) } ?: "—", "ms")
-                BigReadout(currentDrawW?.let { String.format(java.util.Locale.US, "%.1f", it) } ?: "—", "W")
-            }
-            Row(
-                Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                Text("— ${String.format(java.util.Locale.US, "%.1f", targetMs)} ms target", style = PulseTypography.labelSmall, color = Ink4)
-                Text("·· ${String.format(java.util.Locale.US, "%.0f", targetMs * 2)} ms", style = PulseTypography.labelSmall, color = Ink4)
-                Text("▎jank", style = PulseTypography.labelSmall, color = MeterHot)
+            if (session != null) {
+                Row(
+                    Modifier.align(Alignment.TopEnd).padding(end = 16.dp, top = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(18.dp),
+                    verticalAlignment = Alignment.Bottom,
+                ) {
+                    val held = session.heldShare
+                    if (held != null) BigReadout(String.format(java.util.Locale.US, "%.0f", held * 100), "% at ${session.targetFps}")
+                    else session.avgFps?.let { BigReadout(String.format(java.util.Locale.US, "%.0f", it), "fps avg") }
+                    session.avgDrawW?.let { BigReadout(String.format(java.util.Locale.US, "%.1f", it), "W avg") }
+                    session.peakTempC?.let { BigReadout("$it", "° peak") }
+                }
+                Row(
+                    Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    Text("— ${String.format(java.util.Locale.US, "%.1f", targetMs)} ms target", style = PulseTypography.labelSmall, color = Ink4)
+                    Text("·· ${String.format(java.util.Locale.US, "%.0f", targetMs * 2)} ms", style = PulseTypography.labelSmall, color = Ink4)
+                    Text("▎jank", style = PulseTypography.labelSmall, color = MeterHot)
+                }
             }
         }
     }
+}
+
+/** "· 42 min · live" or "· 42 min · ended 5 min ago". */
+private fun sessionMeta(s: GameSession): String {
+    val mins = (s.durationMs / 60_000L).toInt()
+    val dur = if (mins < 1) "under a minute" else if (mins < 60) "$mins min" else "${mins / 60} h ${mins % 60} min"
+    val tail = if (s.isLive) "live" else {
+        val agoMin = ((System.currentTimeMillis() - (s.endedAtMs ?: 0L)) / 60_000L).toInt()
+        when {
+            agoMin < 1 -> "just now"
+            agoMin < 60 -> "ended $agoMin min ago"
+            agoMin < 60 * 24 -> "ended ${agoMin / 60} h ago"
+            else -> "ended ${agoMin / (60 * 24)} d ago"
+        }
+    }
+    return "· $dur · $tail"
 }
 
 @Composable

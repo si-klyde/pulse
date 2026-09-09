@@ -39,6 +39,7 @@ fun LiveColumn(
     policies: List<CpuPolicyInfo>,
     fanPercent: Int?,
     batteryTimeLeft: String?,
+    plugged: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val cpuPolicies = policies.filterNot { it.isGpu }.sortedBy { it.id }
@@ -89,7 +90,7 @@ fun LiveColumn(
         Spacer(Modifier.weight(1f))
         val pct = telemetry.batteryPercent
         Gauge(
-            label = "Battery" + (batteryTimeLeft?.let { " · $it left" } ?: ""),
+            label = "Battery" + when { plugged -> " · charging"; batteryTimeLeft != null -> " · $batteryTimeLeft left"; else -> "" },
             value = pct?.toString() ?: "—",
             unit = "%",
             fraction = (pct ?: 0) / 100f,

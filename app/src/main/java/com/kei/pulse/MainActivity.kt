@@ -14,6 +14,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -118,7 +119,13 @@ class MainActivity : ComponentActivity() {
                     var sectionOrdinal by rememberSaveable { mutableStateOf(Section.POWER.ordinal) }
                     val section = Section.entries[sectionOrdinal]
                     val telemetry = viewModel.telemetry.collectAsStateWithLifecycle().value
-                    val drawHistory = viewModel.drawHistory.collectAsStateWithLifecycle().value
+                    val recap = viewModel.recap.collectAsStateWithLifecycle().value
+                    val plugged = remember(telemetry) { com.kei.pulse.data.PowerSource.isPlugged(this@MainActivity) }
+                    LaunchedEffect(Unit) {
+                        if (com.kei.pulse.data.SessionFeed.current.value == null) {
+                            com.kei.pulse.data.SessionStore(this@MainActivity).load()?.let { com.kei.pulse.data.SessionFeed.publish(if (it.isLive) it.ended(it.startedAtMs + it.durationMs) else it) }
+                        }
+                    }
                     val fanDuty = viewModel.fanDuty.collectAsStateWithLifecycle().value
                     val fanEditor = if (customFanSupported) {
                         FanCurveEditorBindings(
@@ -170,15 +177,12 @@ class MainActivity : ComponentActivity() {
                         onSelectSection = { sectionOrdinal = it.ordinal },
                         statusLine1 = if (state.isPServerAvailable) "On · linked, no root" else "PServer unavailable",
                         statusLine2 = if (autoTdpEnabled) "Auto · holding $autoTdpFpsTarget fps" else "Manual · ${activeTier.label}",
-                        frameTimesMs = emptyList(), // TODO(rp6): feed FpsReader samples from the watcher
-                        drawWatts = drawHistory,
-                        targetFps = autoTdpFpsTarget,
-                        currentFps = null,
-                        currentDrawW = telemetry.batteryDrawW,
+                        session = recap,
                         telemetry = telemetry,
                         policies = state.policies,
                         fanPercent = fanDuty,
                         batteryTimeLeft = null,
+                        plugged = plugged,
                     ) {
                     when (section) {
                     Section.PER_GAME -> {

@@ -25,7 +25,6 @@ import com.kei.pulse.data.SettingsStorage
 import com.kei.pulse.model.PerAppConfig
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.scan
 import com.kei.pulse.model.AppColorSource
 import com.kei.pulse.model.AppSettings
 import com.kei.pulse.model.AutoTdpBias
@@ -684,10 +683,8 @@ class TunerViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TelemetrySnapshot())
 
-    /** Last 60 power-draw samples (W), oldest first, for the header trace. */
-    val drawHistory: StateFlow<List<Float>> = telemetry
-        .scan(emptyList<Float>()) { acc, snap -> (acc + (snap.batteryDrawW ?: acc.lastOrNull() ?: 0f)).takeLast(60) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    /** The game session the home screen shows: live while a game runs, else the last recap. */
+    val recap: StateFlow<com.kei.pulse.model.GameSession?> = com.kei.pulse.data.SessionFeed.current
 
     /** Live fan duty %, polled every 2 s while shown. */
     val fanDuty: StateFlow<Int?> = flow {
