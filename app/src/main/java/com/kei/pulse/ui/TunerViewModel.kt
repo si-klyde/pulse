@@ -1160,12 +1160,6 @@ class TunerViewModel(
         }
     }
 
-    fun setThemeId(themeId: com.kei.pulse.model.PulseThemeId) {
-        viewModelScope.launch {
-            settingsStorage.persistThemeId(themeId)
-        }
-    }
-
     fun setColorSource(colorSource: AppColorSource) {
         viewModelScope.launch {
             settingsStorage.persistColorSource(colorSource)

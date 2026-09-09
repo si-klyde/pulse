@@ -2,25 +2,23 @@ package com.kei.pulse.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// PULSE — deep-space radio-telemetry palette.
-// Near-black surfaces, signal cyan primary, amber warnings, a faint signal green.
-val PulseVoid        = Color(0xFF04070D) // app background
-val PulseDeep        = Color(0xFF070D18) // raised background
-val PulseSurface     = Color(0xFF0B1320) // panels
-val PulseSurfaceHi   = Color(0xFF111C2E) // elevated panels
-val PulseSurfaceHi2  = Color(0xFF16243A)
-val PulseLine        = Color(0xFF1E3147) // hairline borders / outline
+// Quiet instrument. Warm graphite housing, off-white ink, one glass-blue accent.
+// The semantic meter ramp (sage → brass → brick) lives in overlay/MeterColors and is deliberately
+// separate from the accent so temperature/load never reads as "selected".
+val InstrumentHousing = Color(0xFF1B1A18) // app background
+val InstrumentBase    = Color(0xFF1F1E1B) // lowest raised
+val InstrumentPanel   = Color(0xFF232220) // panels
+val InstrumentRaised  = Color(0xFF2B2A27) // elevated panels
+val InstrumentRaised2 = Color(0xFF333230)
+val InstrumentRule    = Color(0xFF3A3833) // 1 dp rules / outline
 
-val PulseCyan        = Color(0xFF3DF0E0) // primary signal
-val PulseCyanDim     = Color(0xFF1D8C87)
-val PulseCyanDeep    = Color(0xFF06322F) // primary container
-val PulseAmber       = Color(0xFFFFB648) // GPU / warnings (tertiary)
-val PulseAmberDeep   = Color(0xFF3A2A0C)
-val PulseSignal      = Color(0xFF62FFB8) // success / live
-val PulseRed         = Color(0xFFFF5D6C) // error / destructive
-val PulseRedDeep     = Color(0xFF3A1116)
+val InstrumentAccent     = Color(0xFF8FB8CC) // glass blue
+val InstrumentAccentDeep = Color(0xFF243239) // accent container
+val InstrumentOnAccent   = Color(0xFF101418)
 
-val PulseInk         = Color(0xFFDFF6F4) // primary text
-val PulseInkDim      = Color(0xFF8DA6AD) // secondary text
-val PulseInkFaint    = Color(0xFF5C737B)
-val PulseOnSignal    = Color(0xFF04110D) // text on bright fills
+val InstrumentInk      = Color(0xFFECE8E0) // primary text
+val InstrumentInkDim   = Color(0xFFA39E93) // secondary text
+val InstrumentInkFaint = Color(0xFF6E6960)
+
+val InstrumentBrick     = Color(0xFFD96B5C) // error / destructive (shared with meter "hot")
+val InstrumentBrickDeep = Color(0xFF3A221E)

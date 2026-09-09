@@ -4,9 +4,9 @@ import androidx.compose.ui.graphics.Color
 
 // Semantic meter ramp for temps/load — cool → warm → hot, independent of the theme accent. Shared by the
 // OSD (OverlayContent) and the Quick Access bar (QaControls/Panel) so the two overlays read as one product.
-internal val MeterCool = Color(0xFF4FD89B)
-internal val MeterWarm = Color(0xFFFFB000)
-internal val MeterHot = Color(0xFFFF5D6C)
+internal val MeterCool = Color(0xFF7FB59A)
+internal val MeterWarm = Color(0xFFD9A441)
+internal val MeterHot = Color(0xFFD96B5C)
 
 /** 0..1 fraction → cool→warm→hot. */
 internal fun meterRamp(fraction: Float): Color {

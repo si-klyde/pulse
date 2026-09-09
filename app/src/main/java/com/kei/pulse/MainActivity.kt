@@ -33,9 +33,7 @@ import com.kei.pulse.ui.MainTunerScreen
 import com.kei.pulse.ui.PerAppScreen
 import com.kei.pulse.ui.SettingsScreen
 import com.kei.pulse.ui.TunerViewModel
-import com.kei.pulse.ui.theme.LocalThermalHeat
 import com.kei.pulse.ui.theme.PulseTheme
-import com.kei.pulse.ui.theme.heatForTier
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -131,7 +129,6 @@ class MainActivity : ComponentActivity() {
                         if (showPerApps) showPerApps = false else showSettings = false
                     }
 
-                    CompositionLocalProvider(LocalThermalHeat provides heatForTier(activeTier)) {
                     if (showPerApps) {
                         PerAppScreen(
                             configs = perAppConfigs,
@@ -154,7 +151,6 @@ class MainActivity : ComponentActivity() {
                             onRgbManualTargetChange = viewModel::setRgbManualTarget,
                             onRgbManualStickChange = ::onRgbManualStickChanged,
                             onColorSourceChange = viewModel::setColorSource,
-                            onThemeChange = viewModel::setThemeId,
                             onAccentColorChange = viewModel::setAccentColor,
                             onTileTapBehaviorChange = { behavior ->
                                 viewModel.setTileTapBehavior(behavior) {
@@ -289,7 +285,6 @@ class MainActivity : ComponentActivity() {
                             autoTdpBias = autoTdpBias,
                             onAutoTdpBiasChange = viewModel::setAutoTdpBias,
                         )
-                    }
                     }
                 }
             }

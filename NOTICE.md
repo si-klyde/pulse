@@ -27,8 +27,8 @@ ClusterTune in turn credits:
 
 ## Bundled fonts
 
-- **Chakra Petch** and **IBM Plex Mono** are licensed under the SIL Open Font License 1.1.
-  Full license texts are in `licenses/OFL-ChakraPetch.txt` and `licenses/OFL-IBMPlexMono.txt`.
+- **IBM Plex Sans** and **IBM Plex Mono** are licensed under the SIL Open Font License 1.1.
+  Full license texts are in `licenses/OFL-IBMPlexSans.txt` and `licenses/OFL-IBMPlexMono.txt`.
 
 ## AI assistance disclosure
 
