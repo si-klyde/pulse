@@ -24,6 +24,8 @@ import com.kei.pulse.data.PowerEstimator
 import com.kei.pulse.data.SettingsStorage
 import com.kei.pulse.model.PerAppConfig
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.scan
 import com.kei.pulse.model.AppColorSource
 import com.kei.pulse.model.AppSettings
 import com.kei.pulse.model.AutoTdpBias
@@ -673,6 +675,19 @@ class TunerViewModel(
             }
         }
     }
+
+    /** Live telemetry, polled once a second only while something on screen collects it. */
+    val telemetry: StateFlow<TelemetrySnapshot> = flow {
+        while (true) {
+            emit(readTelemetry())
+            delay(1_000)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TelemetrySnapshot())
+
+    /** Last 60 power-draw samples (W), oldest first, for the header trace. */
+    val drawHistory: StateFlow<List<Float>> = telemetry
+        .scan(emptyList<Float>()) { acc, snap -> (acc + (snap.batteryDrawW ?: acc.lastOrNull() ?: 0f)).takeLast(60) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     suspend fun readTelemetry(): TelemetrySnapshot {
         val snap = withContext(Dispatchers.IO) { telemetryReader.read(state.value.policies) }

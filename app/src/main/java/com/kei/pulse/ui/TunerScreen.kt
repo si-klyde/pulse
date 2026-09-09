@@ -138,6 +138,8 @@ fun MainTunerScreen(
     onAutoTdpAggressiveParkChange: (Boolean) -> Unit,
     autoTdpBias: AutoTdpBias,
     onAutoTdpBiasChange: (AutoTdpBias) -> Unit,
+    /** Hosted inside [com.kei.pulse.ui.shell.RailShell]: no header, telemetry HUD or page background. */
+    embedded: Boolean = false,
 ) {
     var dialogProfileId by remember { mutableStateOf<String?>(null) }
 
@@ -156,15 +158,15 @@ fun MainTunerScreen(
         }
     }
 
-    ScreenContainer(compactMode = false) {
+    ScreenContainer(compactMode = false, embedded = embedded) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+                .padding(horizontal = if (embedded) 24.dp else 20.dp, vertical = if (embedded) 16.dp else 28.dp),
+            verticalArrangement = Arrangement.spacedBy(if (embedded) 14.dp else 18.dp),
         ) {
-            Header(
+            if (!embedded) Header(
                 state = state,
                 compactMode = false,
                 onOpenSettings = onOpenSettings,
@@ -180,14 +182,14 @@ fun MainTunerScreen(
                     fontWeight = FontWeight.SemiBold,
                 )
             } else {
-                TelemetryHud(
+                if (!embedded) TelemetryHud(
                     readTelemetry = readTelemetry,
                     estimatedPeakW = estimatedPeakW,
                 )
 
                 // Names the whole page so it's clear these are the everywhere-defaults, distinct from the
                 // per-app overrides (Settings → Per-app profiles).
-                Column(
+                if (!embedded) Column(
                     modifier = Modifier.padding(start = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
@@ -483,11 +485,14 @@ private fun ScreenNotifications(
 @Composable
 private fun ScreenContainer(
     compactMode: Boolean,
+    embedded: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
-    if (compactMode) {
+    if (embedded) {
+        content()
+    } else if (compactMode) {
         // Quick Settings tile dialog: dim scrim + bottom sheet card.
         Box(modifier = Modifier.fillMaxSize().background(colorScheme.scrim.copy(alpha = 0.45f))) {
             Card(

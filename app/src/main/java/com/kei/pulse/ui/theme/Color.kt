@@ -2,23 +2,19 @@ package com.kei.pulse.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Quiet instrument. Warm graphite housing, off-white ink, one glass-blue accent.
-// The semantic meter ramp (sage → brass → brick) lives in overlay/MeterColors and is deliberately
-// separate from the accent so temperature/load never reads as "selected".
-val InstrumentHousing = Color(0xFF1B1A18) // app background
-val InstrumentBase    = Color(0xFF1F1E1B) // lowest raised
-val InstrumentPanel   = Color(0xFF232220) // panels
-val InstrumentRaised  = Color(0xFF2B2A27) // elevated panels
-val InstrumentRaised2 = Color(0xFF333230)
-val InstrumentRule    = Color(0xFF3A3833) // 1 dp rules / outline
+// RP6 design: true black housing (zero-power pixels on the AMOLED), white ink at three luminances, and
+// colour ONLY where it means something — the meter ramp for heat/load/battery in overlay/MeterColors.
+val Housing  = Color(0xFF000000) // app background
+val Rule     = Color(0xFF1C1C1C) // hairlines
+val Rule2    = Color(0xFF2A2A2A) // control outlines, track backgrounds
+val Raised   = Color(0xFF141414) // the one raised surface (target band, pressed state)
 
-val InstrumentAccent     = Color(0xFF8FB8CC) // glass blue
-val InstrumentAccentDeep = Color(0xFF243239) // accent container
-val InstrumentOnAccent   = Color(0xFF101418)
+val Ink      = Color(0xFFF4F2EE) // primary text, selected fills
+val Ink2     = Color(0xFFA8A6A1) // secondary text
+val Ink3     = Color(0xFF7A7A7A) // labels, units
+val Ink4     = Color(0xFF4A4A4A) // faint: axis marks, disabled
 
-val InstrumentInk      = Color(0xFFECE8E0) // primary text
-val InstrumentInkDim   = Color(0xFFA39E93) // secondary text
-val InstrumentInkFaint = Color(0xFF6E6960)
+val OnInk    = Color(0xFF000000) // text on an Ink fill
 
-val InstrumentBrick     = Color(0xFFD96B5C) // error / destructive (shared with meter "hot")
-val InstrumentBrickDeep = Color(0xFF3A221E)
+val Brick    = Color(0xFFD96B5C) // error / destructive (also the meter "hot")
+val BrickDeep = Color(0xFF2A1512)

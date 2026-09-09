@@ -34,6 +34,8 @@ import com.kei.pulse.ui.PerAppScreen
 import com.kei.pulse.ui.SettingsScreen
 import com.kei.pulse.ui.TunerViewModel
 import com.kei.pulse.ui.theme.PulseTheme
+import com.kei.pulse.ui.shell.RailShell
+import com.kei.pulse.ui.shell.Section
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -108,8 +110,10 @@ class MainActivity : ComponentActivity() {
                     val autoTdpAggressivePark = viewModel.autoTdpAggressivePark.collectAsStateWithLifecycle().value
                     val autoTdpBias = viewModel.autoTdpBias.collectAsStateWithLifecycle().value
                     val estimatedPeakW = viewModel.estimatedPeakW.collectAsStateWithLifecycle().value
-                    var showSettings by rememberSaveable { mutableStateOf(false) }
-                    var showPerApps by rememberSaveable { mutableStateOf(false) }
+                    var sectionOrdinal by rememberSaveable { mutableStateOf(Section.POWER.ordinal) }
+                    val section = Section.entries[sectionOrdinal]
+                    val telemetry = viewModel.telemetry.collectAsStateWithLifecycle().value
+                    val drawHistory = viewModel.drawHistory.collectAsStateWithLifecycle().value
                     val perAppEnabled = viewModel.perAppEnabled.collectAsStateWithLifecycle().value
                     val perAppConfigs = viewModel.perAppConfigs.collectAsStateWithLifecycle().value
                     val perAppSwitchNotices = viewModel.perAppSwitchNotices.collectAsStateWithLifecycle().value
@@ -125,11 +129,25 @@ class MainActivity : ComponentActivity() {
                     }
 
                     // System / controller back navigates out of sub-screens instead of exiting.
-                    BackHandler(enabled = showPerApps || showSettings) {
-                        if (showPerApps) showPerApps = false else showSettings = false
-                    }
+                    BackHandler(enabled = section != Section.POWER) { sectionOrdinal = Section.POWER.ordinal }
 
-                    if (showPerApps) {
+                    RailShell(
+                        section = section,
+                        onSelectSection = { sectionOrdinal = it.ordinal },
+                        statusLine1 = if (state.isPServerAvailable) "On · linked, no root" else "PServer unavailable",
+                        statusLine2 = if (autoTdpEnabled) "Auto · holding $autoTdpFpsTarget fps" else "Manual · ${activeTier.label}",
+                        frameTimesMs = emptyList(), // TODO(rp6): feed FpsReader samples from the watcher
+                        drawWatts = drawHistory,
+                        targetFps = autoTdpFpsTarget,
+                        currentFps = null,
+                        currentDrawW = telemetry.batteryDrawW,
+                        telemetry = telemetry,
+                        policies = state.policies,
+                        fanPercent = null,
+                        batteryTimeLeft = null,
+                    ) {
+                    when (section) {
+                    Section.PER_GAME -> {
                         PerAppScreen(
                             configs = perAppConfigs,
                             learnedPackages = viewModel.autoTdpLearnedPackages.collectAsStateWithLifecycle().value,
@@ -140,12 +158,13 @@ class MainActivity : ComponentActivity() {
                             defaultAggressivePark = autoTdpAggressivePark,
                             onSaveConfig = ::onSavePerAppConfig,
                             onRemoveConfig = viewModel::removePerAppConfig,
-                            onBack = { showPerApps = false },
+                            onBack = { sectionOrdinal = Section.POWER.ordinal },
                         )
-                    } else if (showSettings) {
+                    }
+                    Section.OVERLAY, Section.LIGHTS, Section.SYSTEM -> {
                         SettingsScreen(
                             settings = settings,
-                            onBack = { showSettings = false },
+                            onBack = { sectionOrdinal = Section.POWER.ordinal },
                             onPulseEnabledChange = ::onPulseMasterToggle,
                             onRgbModeChange = ::onRgbModeSelected,
                             onRgbManualTargetChange = viewModel::setRgbManualTarget,
@@ -186,7 +205,7 @@ class MainActivity : ComponentActivity() {
                             perAppEnabled = perAppEnabled,
                             perAppConfiguredCount = perAppConfigs.size,
                             onPerAppEnabledChange = ::setPerAppProfilesEnabled,
-                            onOpenPerApps = { showPerApps = true },
+                            onOpenPerApps = { sectionOrdinal = Section.PER_GAME.ordinal },
                             perAppSwitchNotices = perAppSwitchNotices,
                             onPerAppSwitchNoticesChange = viewModel::setPerAppSwitchNotices,
                             overlayEnabled = settings.overlayEnabled,
@@ -203,8 +222,10 @@ class MainActivity : ComponentActivity() {
                             onClearQuickAccessCombo = viewModel::clearQuickAccessCombo,
                             capturingCombo = viewModel.capturingCombo.collectAsStateWithLifecycle().value,
                         )
-                    } else {
+                    }
+                    Section.POWER, Section.FAN -> {
                         MainTunerScreen(
+                            embedded = true,
                             state = state,
                             sleepProfileId = settings.sleepProfileId.takeIf { settings.sleepProfileEnabled },
                             onApplyProfile = viewModel::applyProfile,
@@ -217,7 +238,7 @@ class MainActivity : ComponentActivity() {
                             onUpdateProfile = viewModel::updateProfile,
                             onDeleteProfile = viewModel::deleteProfile,
                             onMoveProfile = viewModel::moveProfile,
-                            onOpenSettings = { showSettings = true },
+                            onOpenSettings = { sectionOrdinal = Section.SYSTEM.ordinal },
                             onRefreshLiveValues = viewModel::refreshLiveState,
                             estimatedPeakW = estimatedPeakW,
                             onStatusMessageShown = viewModel::consumeStatusMessage,
@@ -285,6 +306,8 @@ class MainActivity : ComponentActivity() {
                             autoTdpBias = autoTdpBias,
                             onAutoTdpBiasChange = viewModel::setAutoTdpBias,
                         )
+                    }
+                    }
                     }
                 }
             }

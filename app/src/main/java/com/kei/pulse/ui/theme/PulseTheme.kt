@@ -15,47 +15,48 @@ import com.kei.pulse.model.AppColorSource
 import com.kei.pulse.model.AppSettings
 
 /**
- * One fixed dark scheme regardless of system light/dark: the app is an instrument panel, and a panel
- * does not change its housing with the room. The only user-tunable colour is the accent
- * (CUSTOM_ACCENT); everything else is the graphite/ink palette in [Color.kt].
+ * One fixed scheme regardless of system light/dark: black housing, white ink, no chromatic accent.
+ * `primary` IS the ink — a selected control is an inverted fill, not a coloured one. The custom-accent
+ * setting still works for people who want colour back; it only recolours `primary`.
  */
 private fun instrumentColorScheme(settings: AppSettings): ColorScheme {
-    val accent = if (settings.colorSource == AppColorSource.CUSTOM_ACCENT) Color(settings.accentColor) else InstrumentAccent
+    val accent = if (settings.colorSource == AppColorSource.CUSTOM_ACCENT) Color(settings.accentColor) else Ink
+    val onAccent = if (settings.colorSource == AppColorSource.CUSTOM_ACCENT) Ink else OnInk
     return darkColorScheme(
         primary = accent,
-        onPrimary = InstrumentOnAccent,
-        primaryContainer = InstrumentAccentDeep,
-        onPrimaryContainer = accent,
-        secondary = InstrumentInkDim,
-        onSecondary = InstrumentHousing,
-        secondaryContainer = InstrumentRaised2,
-        onSecondaryContainer = InstrumentInk,
-        tertiary = InstrumentInkDim,
-        onTertiary = InstrumentHousing,
-        tertiaryContainer = InstrumentRaised,
-        onTertiaryContainer = InstrumentInk,
-        background = InstrumentHousing,
-        onBackground = InstrumentInk,
-        surface = InstrumentPanel,
-        onSurface = InstrumentInk,
-        surfaceVariant = InstrumentRaised,
-        onSurfaceVariant = InstrumentInkDim,
-        surfaceContainerLowest = InstrumentHousing,
-        surfaceContainerLow = InstrumentBase,
-        surfaceContainer = InstrumentPanel,
-        surfaceContainerHigh = InstrumentRaised,
-        surfaceContainerHighest = InstrumentRaised2,
-        surfaceBright = InstrumentRaised2,
-        surfaceDim = InstrumentBase,
-        surfaceTint = accent,
-        inverseSurface = InstrumentInk,
-        inverseOnSurface = InstrumentHousing,
-        outline = InstrumentRule,
-        outlineVariant = InstrumentInkFaint,
-        error = InstrumentBrick,
-        onError = InstrumentInk,
-        errorContainer = InstrumentBrickDeep,
-        onErrorContainer = InstrumentBrick,
+        onPrimary = onAccent,
+        primaryContainer = Raised,
+        onPrimaryContainer = Ink,
+        secondary = Ink2,
+        onSecondary = OnInk,
+        secondaryContainer = Rule2,
+        onSecondaryContainer = Ink,
+        tertiary = Ink2,
+        onTertiary = OnInk,
+        tertiaryContainer = Raised,
+        onTertiaryContainer = Ink,
+        background = Housing,
+        onBackground = Ink,
+        surface = Housing,
+        onSurface = Ink,
+        surfaceVariant = Raised,
+        onSurfaceVariant = Ink2,
+        surfaceContainerLowest = Housing,
+        surfaceContainerLow = Housing,
+        surfaceContainer = Housing,
+        surfaceContainerHigh = Raised,
+        surfaceContainerHighest = Rule,
+        surfaceBright = Rule2,
+        surfaceDim = Housing,
+        surfaceTint = Color.Transparent,
+        inverseSurface = Ink,
+        inverseOnSurface = OnInk,
+        outline = Rule2,
+        outlineVariant = Rule,
+        error = Brick,
+        onError = Ink,
+        errorContainer = BrickDeep,
+        onErrorContainer = Brick,
         scrim = Color(0xCC000000),
     )
 }
