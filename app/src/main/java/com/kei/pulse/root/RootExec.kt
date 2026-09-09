@@ -6,10 +6,10 @@ import android.os.Parcel
 import java.nio.charset.Charset
 
 @SuppressLint("DiscouragedPrivateApi", "PrivateApi")
-class RootExec {
+class RootExec : RootExecutor {
 
     private val binder: IBinder?
-    var pServerAvailable: Boolean = false
+    override var pServerAvailable: Boolean = false
         private set
 
     init {
@@ -22,7 +22,7 @@ class RootExec {
         }.getOrDefault(null)
     }
 
-    fun executeAsRoot(cmd: String): Result<String?> {
+    override fun executeAsRoot(cmd: String): Result<String?> {
         if (binder == null) return Result.failure(IllegalStateException("PServer not available"))
 
         val data = Parcel.obtain()
