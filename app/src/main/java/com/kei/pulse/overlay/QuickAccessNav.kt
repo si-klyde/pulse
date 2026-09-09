@@ -25,6 +25,17 @@ object QuickAccessNav {
     fun moveTab(tabIndex: Int, delta: Int, tabCount: Int): Int =
         if (tabCount <= 0) 0 else ((tabIndex + delta) % tabCount + tabCount) % tabCount
 
+    /**
+     * Bumpers jump between GROUPS in the single column: from [item], go to the start of the previous/next group
+     * (by [delta] = -1/+1), wrapping around. [groupStarts] are ascending item indices; an empty list pins 0.
+     */
+    fun moveGroup(item: Int, delta: Int, groupStarts: List<Int>): Int {
+        if (groupStarts.isEmpty()) return 0
+        val current = groupStarts.indexOfLast { it <= item }.coerceAtLeast(0)
+        val next = ((current + delta) % groupStarts.size + groupStarts.size) % groupStarts.size
+        return groupStarts[next]
+    }
+
     /** Re-clamp a cursor after the item list shrank (e.g. AutoTDP sub-controls hidden on a mode switch). */
     fun clampItem(item: Int, itemCount: Int): Int =
         if (itemCount <= 0) 0 else item.coerceIn(0, itemCount - 1)

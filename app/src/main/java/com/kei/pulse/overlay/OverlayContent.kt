@@ -11,24 +11,23 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -37,10 +36,29 @@ import androidx.compose.ui.unit.sp
 import com.kei.pulse.data.TelemetrySnapshot
 import com.kei.pulse.model.OverlayElement
 import com.kei.pulse.model.OverlayPreset
+import com.kei.pulse.ui.theme.Azeret
+import com.kei.pulse.ui.theme.Bricolage
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.roundToInt
 
-// Temp/load coloring comes from the shared MeterColors ramp (also used by the Quick Access bar).
+/*
+ * In-game overlay. It sits on someone else's frame, so it is NOT the app's black: a smoke surface the game
+ * reads through, one hairline, and colour only where it means heat or load. Dimensions are the app's
+ * long-standing ones (docked strip 16/6 dp; card 300 dp, 12 dp radius, 10/8 dp padding; 9/12 sp type).
+ */
+internal val Smoke = Color(0xB8_16161A)      // 72 %
+internal val SmokeDeep = Color(0xD1_12121A)  // 82 %
+internal val Hair = Color(0x24_FFFFFF)       // 14 %
+internal val OsdInk = Color(0xFFF4F2EE)
+internal val OsdInk2 = Color(0xB3_FFFFFF)    // 70 %
+internal val OsdInk3 = Color(0x8C_FFFFFF)    // 55 %
+internal val OsdInk4 = Color(0x73_FFFFFF)    // 45 %
+
+private val LabelStyle = TextStyle(fontFamily = Bricolage, fontSize = 9.sp, lineHeight = 10.sp, color = OsdInk3)
+private val ValueStyle = TextStyle(fontFamily = Azeret, fontSize = 12.sp, lineHeight = 14.sp, fontWeight = FontWeight.Normal, letterSpacing = (-0.02).sp, fontFeatureSettings = "tnum")
+private val BigStyle = TextStyle(fontFamily = Azeret, fontSize = 20.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = (-0.02).sp, fontFeatureSettings = "tnum")
+private val StripStyle = TextStyle(fontFamily = Azeret, fontSize = 11.sp, lineHeight = 13.sp, letterSpacing = (-0.02).sp, fontFeatureSettings = "tnum")
+private val SmallStyle = TextStyle(fontFamily = Bricolage, fontSize = 10.sp, lineHeight = 12.sp, color = OsdInk3)
 
 @Composable
 fun OverlayContent(
@@ -53,21 +71,19 @@ fun OverlayContent(
     val stats by statsFlow.collectAsState()
     val config by configFlow.collectAsState()
     val opacity = (config.opacityPercent / 100f).coerceIn(0.4f, 1f)
-    val accent = MaterialTheme.colorScheme.primary
 
     if (config.preset == OverlayPreset.COMPACT) {
-        DockedBar(stats, config, accent, opacity, onCyclePreset, onToggleLock)
+        DockedStrip(stats, config, opacity, onCyclePreset, onToggleLock)
     } else {
-        FloatingPanel(stats, config, accent, opacity, onDrag, onCyclePreset, onToggleLock)
+        FloatingCard(stats, config, opacity, onDrag, onCyclePreset, onToggleLock)
     }
 }
 
-/** Detailed/Full: a wrap-content rounded panel, draggable when unlocked (the window is WRAP_CONTENT). */
+/** Detailed/Full: the 300 dp card, draggable when unlocked (the window is WRAP_CONTENT). */
 @Composable
-private fun FloatingPanel(
+private fun FloatingCard(
     stats: OverlayStats,
     config: OverlayConfig,
-    accent: Color,
     opacity: Float,
     onDrag: (dx: Float, dy: Float) -> Unit,
     onCyclePreset: () -> Unit,
@@ -89,133 +105,99 @@ private fun FloatingPanel(
                 },
             ),
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color.Black.copy(alpha = 0.62f))
-                .border(1.dp, accent.copy(alpha = 0.55f), RoundedCornerShape(12.dp))
+                .background(Smoke)
+                .border(1.dp, Hair, RoundedCornerShape(12.dp))
                 .padding(horizontal = 10.dp, vertical = 8.dp)
                 .widthIn(max = 300.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (!config.locked) ControlRow(onCyclePreset = onCyclePreset, onToggleLock = onToggleLock)
-                when (config.preset) {
-                    OverlayPreset.DETAILED -> DetailedPanel(stats, config.elements)
-                    OverlayPreset.FULL -> FullPanel(stats, config.elements)
-                    OverlayPreset.COMPACT -> Unit // Compact is rendered as the docked bar, not here.
-                }
-                // The thermal warning is always shown when tripped, regardless of which items are toggled.
-                if (isThrottling(stats.telemetry)) ThrottlePill()
+            if (!config.locked) Controls(dragHint = true, onCyclePreset, onToggleLock)
+            when (config.preset) {
+                OverlayPreset.DETAILED -> DetailedCard(stats, config.elements)
+                OverlayPreset.FULL -> FullCard(stats, config.elements)
+                OverlayPreset.COMPACT -> Unit
             }
+            if (isThrottling(stats.telemetry)) ThermalTag()
         }
     }
 }
 
 /**
- * Compact, docked: a full-width status bar pinned to the top of the screen (its window is MATCH_PARENT and
- * not draggable). Metrics are distributed edge-to-edge with [Arrangement.SpaceBetween], so the bar spans the
- * width and never resizes as the numbers change — no jitter, and a wide value (LEFT) can't wrap.
+ * Compact, docked: a full-width strip pinned to the top (its window is MATCH_PARENT, not draggable). Label-less
+ * apart from unit hints; groups separated by hairlines. Fixed order so numbers never shift as they change.
  */
 @Composable
-private fun DockedBar(
+private fun DockedStrip(
     stats: OverlayStats,
     config: OverlayConfig,
-    accent: Color,
     opacity: Float,
     onCyclePreset: () -> Unit,
     onToggleLock: () -> Unit,
 ) {
     val t = stats.telemetry
     val els = config.elements
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .alpha(opacity)
-            .background(Color.Black.copy(alpha = 0.66f))
-            .drawBehind {
-                val y = size.height - 1f
-                drawLine(
-                    color = accent.copy(alpha = 0.55f),
-                    start = Offset(0f, y),
-                    end = Offset(size.width, y),
-                    strokeWidth = 2f,
-                )
-            }
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-    ) {
+    Column(Modifier.fillMaxWidth().alpha(opacity).background(Smoke)) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (OverlayElement.FPS in els) Inline("FPS", fpsText(stats.fps?.fps), accent)
-            if (OverlayElement.GPU_LOAD in els) Inline("GPU", pct(t.gpuLoadPercent), loadColor(t.gpuLoadPercent))
-            if (OverlayElement.GPU_TEMP in els) Inline("°G", num(t.gpuTempC), tempColor(t.gpuTempC))
-            if (OverlayElement.CPU_LOAD in els) Inline("CPU", pct(t.cpuLoadPercent), loadColor(t.cpuLoadPercent))
-            if (OverlayElement.CPU_TEMP in els) Inline("°C", num(t.cpuTempC), tempColor(t.cpuTempC))
-            if (OverlayElement.POWER in els) Inline("W", powerValue(stats), MaterialTheme.colorScheme.onSurface)
-            if (OverlayElement.BATTERY_LEFT in els) {
-                Inline(if (t.isDischarging) "LEFT" else "FULL", leftText(stats.minutesLeft), MaterialTheme.colorScheme.onSurface)
+            if (OverlayElement.FPS in els) {
+                StripValue(fpsText(stats.fps?.fps), "fps", OsdInk, big = true)
+                Divider()
             }
-            if (isThrottling(t)) ThrottlePill()
-            if (!config.locked) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        "⤢ LAYOUT",
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = accent,
-                        modifier = Modifier.clickable { onCyclePreset() },
-                    )
-                    Text(
-                        "🔒 LOCK",
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = accent,
-                        modifier = Modifier.clickable { onToggleLock() },
-                    )
-                }
+            if (els.any(OverlayElement.GPU_LOAD, OverlayElement.GPU_TEMP)) {
+                if (OverlayElement.GPU_LOAD in els) StripValue("GPU ${pct(t.gpuLoadPercent)}", "%", OsdInk2)
+                if (OverlayElement.GPU_TEMP in els) StripValue(num(t.gpuTempC), "°", tempColor(t.gpuTempC))
+                Divider()
             }
+            if (els.any(OverlayElement.CPU_LOAD, OverlayElement.CPU_TEMP)) {
+                if (OverlayElement.CPU_LOAD in els) StripValue("CPU ${pct(t.cpuLoadPercent)}", "%", OsdInk2)
+                if (OverlayElement.CPU_TEMP in els) StripValue(num(t.cpuTempC), "°", tempColor(t.cpuTempC))
+                Divider()
+            }
+            if (OverlayElement.POWER in els) StripValue(powerValue(stats), "W", OsdInk2)
+            if (OverlayElement.BATTERY_LEFT in els) StripValue(leftText(stats.minutesLeft), if (stats.powerIsCharging) "charging" else "left", OsdInk2)
+            if (isThrottling(t)) ThermalTag()
+            Spacer(Modifier.weight(1f))
+            if (!config.locked) Controls(dragHint = false, onCyclePreset, onToggleLock)
         }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Hair))
     }
 }
 
 @Composable
-private fun ControlRow(onCyclePreset: () -> Unit, onToggleLock: () -> Unit) {
+private fun Divider() {
+    Box(Modifier.width(1.dp).height(12.dp).background(Hair))
+}
+
+@Composable
+private fun StripValue(value: String, unit: String, color: Color, big: Boolean = false) {
+    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(value, style = if (big) StripStyle.copy(fontSize = 13.sp, fontWeight = FontWeight.Medium) else StripStyle, color = color)
+        Text(unit, style = LabelStyle)
+    }
+}
+
+/** Quiet text controls; only visible while unlocked. */
+@Composable
+private fun Controls(dragHint: Boolean, onCyclePreset: () -> Unit, onToggleLock: () -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            "✥ DRAG",
-            fontSize = 9.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            "⤢ LAYOUT",
-            fontSize = 9.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.clickable { onCyclePreset() },
-        )
-        Text(
-            "🔒 LOCK",
-            fontSize = 9.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.clickable { onToggleLock() },
-        )
+        if (dragHint) Text("drag to move", style = SmallStyle)
+        Text("layout", style = SmallStyle.copy(color = OsdInk), modifier = Modifier.clickable { onCyclePreset() })
+        Text("lock", style = SmallStyle.copy(color = OsdInk), modifier = Modifier.clickable { onToggleLock() })
     }
 }
 
 @Composable
-private fun ThrottlePill() {
+private fun ThermalTag() {
     Text(
-        "⚠ THERMAL",
-        fontSize = 9.sp,
-        fontWeight = FontWeight.Bold,
-        color = Color.White,
-        modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(MeterHot)
-            .padding(horizontal = 6.dp, vertical = 2.dp),
+        "thermal",
+        style = SmallStyle.copy(color = OsdInk, fontWeight = FontWeight.Medium),
+        modifier = Modifier.background(MeterHot).padding(horizontal = 6.dp, vertical = 1.dp),
     )
 }
 
@@ -223,214 +205,158 @@ private fun ThrottlePill() {
 private fun Set<OverlayElement>.any(vararg e: OverlayElement): Boolean = e.any { it in this }
 
 @Composable
-private fun DetailedPanel(stats: OverlayStats, els: Set<OverlayElement>) {
+private fun DetailedCard(stats: OverlayStats, els: Set<OverlayElement>) {
     val t = stats.telemetry
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (els.any(OverlayElement.FPS, OverlayElement.FPS_TREND, OverlayElement.SESSION_TIMER)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (OverlayElement.FPS in els) BigFps(stats.fps?.fps)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (OverlayElement.FPS in els) Text(fpsText(stats.fps?.fps), style = BigStyle, color = OsdInk)
                 if (OverlayElement.FPS_TREND in els) {
-                    Column {
-                        Text("AVG ${fpsText(stats.fps?.avgFps)}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("LOW ${fpsText(stats.fps?.onePercentLowFps)}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                    Text("avg ${fpsText(stats.fps?.avgFps)} · low ${fpsText(stats.fps?.onePercentLowFps)}", style = SmallStyle, modifier = Modifier.padding(bottom = 1.dp))
                 }
                 if (OverlayElement.SESSION_TIMER in els) {
-                    Spacer(Modifier.size(4.dp))
-                    Text(formatTimer(stats.sessionElapsedMs), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(Modifier.weight(1f))
+                    Text(formatTimer(stats.sessionElapsedMs), style = ValueStyle, color = OsdInk)
                 }
             }
         }
-        if (els.any(OverlayElement.GPU_LOAD, OverlayElement.GPU_CLOCK, OverlayElement.GPU_TEMP, OverlayElement.POWER, OverlayElement.BATTERY_LEFT)) {
+        if (els.any(OverlayElement.GPU_LOAD, OverlayElement.GPU_CLOCK, OverlayElement.GPU_TEMP, OverlayElement.POWER)) {
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 if (OverlayElement.GPU_LOAD in els) Metric("GPU", pct(t.gpuLoadPercent), "%", loadColor(t.gpuLoadPercent))
-                if (OverlayElement.GPU_CLOCK in els) Metric("GPU", num(t.gpuMhz), "MHz", MaterialTheme.colorScheme.tertiary)
-                if (OverlayElement.GPU_TEMP in els) Metric("GPU", num(t.gpuTempC), "°C", tempColor(t.gpuTempC))
-                if (OverlayElement.POWER in els) Metric("PWR", powerValue(stats), "W", MaterialTheme.colorScheme.onSurface)
-                if (OverlayElement.BATTERY_LEFT in els) Metric("BAT", leftText(stats.minutesLeft), if (t.isDischarging) "LEFT" else "FULL", MaterialTheme.colorScheme.onSurface)
+                if (OverlayElement.GPU_CLOCK in els) Metric("GPU clk", num(t.gpuMhz), "MHz")
+                if (OverlayElement.GPU_TEMP in els) Metric("GPU °", num(t.gpuTempC), "", tempColor(t.gpuTempC))
+                if (OverlayElement.POWER in els) Metric("draw", powerValue(stats), "W")
             }
         }
         if (els.any(OverlayElement.CPU_LOAD, OverlayElement.CPU_CLOCK, OverlayElement.CPU_TEMP, OverlayElement.RAM)) {
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 if (OverlayElement.CPU_LOAD in els) Metric("CPU", pct(t.cpuLoadPercent), "%", loadColor(t.cpuLoadPercent))
-                if (OverlayElement.CPU_CLOCK in els) Metric("CPU", ghz(t.cpuClocksMhz.values.maxOrNull()), "GHz", MaterialTheme.colorScheme.primary)
-                if (OverlayElement.CPU_TEMP in els) Metric("CPU", num(t.cpuTempC), "°C", tempColor(t.cpuTempC))
-                if (OverlayElement.RAM in els) Metric("RAM", pct(t.ramUsedPercent), "%", MaterialTheme.colorScheme.onSurface)
+                if (OverlayElement.CPU_CLOCK in els) Metric("CPU clk", ghz(t.cpuClocksMhz.values.maxOrNull()), "GHz")
+                if (OverlayElement.CPU_TEMP in els) Metric("CPU °", num(t.cpuTempC), "", tempColor(t.cpuTempC))
+                if (OverlayElement.RAM in els) Metric("RAM", pct(t.ramUsedPercent), "%")
             }
         }
-        if (OverlayElement.AUTOTDP in els) ProfileOrAutoTdp(stats, showClocks = false)
+        if (els.any(OverlayElement.BATTERY_LEFT, OverlayElement.AUTOTDP)) {
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Hair))
+            if (OverlayElement.BATTERY_LEFT in els) Metric(if (stats.powerIsCharging) "charging" else "left", leftText(stats.minutesLeft), "")
+            if (OverlayElement.AUTOTDP in els) ProfileOrAutoTdp(stats, showClocks = false)
+        }
     }
 }
 
 @Composable
-private fun FullPanel(stats: OverlayStats, els: Set<OverlayElement>) {
+private fun FullCard(stats: OverlayStats, els: Set<OverlayElement>) {
     val t = stats.telemetry
-    val tertiary = MaterialTheme.colorScheme.tertiary
-    val primary = MaterialTheme.colorScheme.primary
     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
         if (els.any(OverlayElement.SOC_NAME, OverlayElement.SESSION_TIMER)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (OverlayElement.SOC_NAME in els) {
-                    Text(
-                        stats.socModel ?: "PULSE",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-                if (OverlayElement.SESSION_TIMER in els) {
-                    Spacer(Modifier.size(2.dp))
-                    Text(formatTimer(stats.sessionElapsedMs), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
+                if (OverlayElement.SOC_NAME in els) Text(stats.socModel ?: "PULSE", style = SmallStyle.copy(color = OsdInk2))
+                Spacer(Modifier.weight(1f))
+                if (OverlayElement.SESSION_TIMER in els) Text(formatTimer(stats.sessionElapsedMs), style = SmallStyle)
             }
         }
-        // FPS hero + trend
         if (els.any(OverlayElement.FPS, OverlayElement.FPS_TREND)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (OverlayElement.FPS in els) BigFps(stats.fps?.fps)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (OverlayElement.FPS in els) Text(fpsText(stats.fps?.fps), style = BigStyle, color = OsdInk)
                 if (OverlayElement.FPS_TREND in els) {
                     Column {
-                        Text("AVG ${fpsText(stats.fps?.avgFps)}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("LOW ${fpsText(stats.fps?.onePercentLowFps)}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("${fmt1(stats.fps?.frameTimeMs)} ms", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("avg ${fpsText(stats.fps?.avgFps)} · low ${fpsText(stats.fps?.onePercentLowFps)}", style = SmallStyle)
+                        Text("${fmt1(stats.fps?.frameTimeMs)} ms", style = SmallStyle)
                     }
-                    stats.fps?.recentFps?.let { Sparkline(it, primary, Modifier.size(width = 64.dp, height = 22.dp)) }
+                    Spacer(Modifier.weight(1f))
+                    stats.fps?.recentFps?.let { Sparkline(it, OsdInk, Modifier.size(width = 64.dp, height = 22.dp)) }
                 }
             }
         }
-        // GPU
-        if (els.any(OverlayElement.GPU_LOAD, OverlayElement.GPU_CLOCK, OverlayElement.GPU_TEMP, OverlayElement.POWER, OverlayElement.BATTERY_LEFT)) {
+        if (els.any(OverlayElement.GPU_LOAD, OverlayElement.GPU_CLOCK, OverlayElement.GPU_TEMP, OverlayElement.POWER)) {
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 if (OverlayElement.GPU_LOAD in els) Metric("GPU", pct(t.gpuLoadPercent), "%", loadColor(t.gpuLoadPercent))
-                if (OverlayElement.GPU_CLOCK in els) Metric("GPU", num(t.gpuMhz), "MHz", tertiary)
-                if (OverlayElement.GPU_TEMP in els) Metric("GPU", num(t.gpuTempC), "°C", tempColor(t.gpuTempC))
-                if (OverlayElement.POWER in els) Metric("PWR", powerValue(stats), "W", MaterialTheme.colorScheme.onSurface)
-                if (OverlayElement.BATTERY_LEFT in els) Metric("BAT", leftText(stats.minutesLeft), if (t.isDischarging) "LEFT" else "FULL", MaterialTheme.colorScheme.onSurface)
+                if (OverlayElement.GPU_CLOCK in els) Metric("GPU clk", num(t.gpuMhz), "MHz")
+                if (OverlayElement.GPU_TEMP in els) Metric("GPU °", num(t.gpuTempC), "", tempColor(t.gpuTempC))
+                if (OverlayElement.POWER in els) Metric("draw", powerValue(stats), "W")
             }
         }
-        // CPU + per-core bars
         if (els.any(OverlayElement.CPU_LOAD, OverlayElement.CPU_CLOCK, OverlayElement.CPU_TEMP, OverlayElement.CORE_BARS)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 if (OverlayElement.CPU_LOAD in els) Metric("CPU", pct(t.cpuLoadPercent), "%", loadColor(t.cpuLoadPercent))
-                if (OverlayElement.CPU_CLOCK in els) Metric("CPU", ghz(t.cpuClocksMhz.values.maxOrNull()), "GHz", primary)
-                if (OverlayElement.CPU_TEMP in els) Metric("CPU", num(t.cpuTempC), "°C", tempColor(t.cpuTempC))
+                if (OverlayElement.CPU_CLOCK in els) Metric("CPU clk", ghz(t.cpuClocksMhz.values.maxOrNull()), "GHz")
+                if (OverlayElement.CPU_TEMP in els) Metric("CPU °", num(t.cpuTempC), "", tempColor(t.cpuTempC))
                 if (OverlayElement.CORE_BARS in els && t.cpuCoreLoadsPercent.isNotEmpty()) {
-                    CoreBars(t.cpuCoreLoadsPercent, primary, Modifier.size(width = 60.dp, height = 22.dp))
+                    Spacer(Modifier.weight(1f))
+                    CoreBars(t.cpuCoreLoadsPercent, OsdInk, Modifier.size(width = 60.dp, height = 22.dp))
                 }
             }
         }
-        // RAM
-        if (OverlayElement.RAM in els) {
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Metric(
-                    "RAM",
-                    if (t.ramUsedMb != null && t.ramTotalMb != null) {
-                        "${t.ramUsedMb / 1024}.${(t.ramUsedMb % 1024) * 10 / 1024}/${t.ramTotalMb / 1024}"
-                    } else {
-                        "—"
-                    },
-                    "GB",
-                    MaterialTheme.colorScheme.onSurface,
-                )
-                Metric("RAM", pct(t.ramUsedPercent), "%", MaterialTheme.colorScheme.onSurface)
+        if (els.any(OverlayElement.RAM, OverlayElement.BATTERY_LEFT, OverlayElement.AUTOTDP)) {
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Hair))
+            if (els.any(OverlayElement.RAM, OverlayElement.BATTERY_LEFT)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.Bottom) {
+                    if (OverlayElement.RAM in els) {
+                        Metric(
+                            "RAM",
+                            if (t.ramUsedMb != null && t.ramTotalMb != null) "${t.ramUsedMb / 1024}.${(t.ramUsedMb % 1024) * 10 / 1024}/${t.ramTotalMb / 1024}" else "—",
+                            "GB",
+                        )
+                    }
+                    if (OverlayElement.BATTERY_LEFT in els) Metric(if (stats.powerIsCharging) "charging" else "left", leftText(stats.minutesLeft), "")
+                }
             }
+            if (OverlayElement.AUTOTDP in els) ProfileOrAutoTdp(stats, showClocks = true)
         }
-        if (OverlayElement.AUTOTDP in els) ProfileOrAutoTdp(stats, showClocks = true)
     }
 }
 
-/**
- * The AutoTDP live readout (per-cluster caps + clocks + learning) when a session is active, else the
- * plain profile/tier banner. AutoTDP replaces the banner because it already names itself.
- */
+/** AutoTDP live readout when a session is active, else the profile/tier banner. */
 @Composable
 private fun ProfileOrAutoTdp(stats: OverlayStats, showClocks: Boolean) {
     val auto = stats.autoTdp
     when {
         auto != null -> AutoTdpRow(auto, showClocks)
-        stats.profileLabel.isNotBlank() -> Text(
-            stats.profileLabel.uppercase(),
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-        )
+        stats.profileLabel.isNotBlank() -> Metric("mode", stats.profileLabel, "")
     }
 }
 
 @Composable
 private fun AutoTdpRow(a: AutoTdpReadout, showClocks: Boolean) {
-    val primary = MaterialTheme.colorScheme.primary
-    val tertiary = MaterialTheme.colorScheme.tertiary
-    val muted = MaterialTheme.colorScheme.onSurfaceVariant
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+        Text(
+            buildString {
+                append("Auto · ${if (a.targetFps <= 0) "max" else "${a.targetFps} fps"}")
+                if (a.primeParked) append(" · parked")
+                append(if (a.learned) " · learned" else " · learning ${a.learningPercent} %")
+            },
+            style = LabelStyle,
+            softWrap = false,
+            maxLines = 1,
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
-            Text("AUTOTDP", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = primary)
-            Text("→ ${if (a.targetFps <= 0) "MAX" else "${a.targetFps}"} fps", fontSize = 9.sp, color = muted)
-            if (a.primeParked) Text("PARK", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MeterCool)
-            Text(
-                if (a.learned) "LRN ✓" else "LRN ${a.learningPercent}%",
-                fontSize = 9.sp,
-                color = muted,
-            )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Bottom) {
-            Text("CPU", fontSize = 8.sp, color = muted)
-            Text(
-                a.cpuClusters.joinToString(" ") { "${it.capPercent}%" },
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = capColor(a.cpuClusters.minOfOrNull { it.capPercent } ?: 100),
-            )
-            a.gpuCapPercent?.let {
-                Text("GPU", fontSize = 8.sp, color = muted)
-                Text("$it%", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = capColor(it))
-            }
+            Text("caps", style = LabelStyle, softWrap = false)
+            Text(a.cpuClusters.joinToString(" ") { "${it.capPercent}" }, style = ValueStyle, color = capColor(a.cpuClusters.minOfOrNull { it.capPercent } ?: 100), softWrap = false, maxLines = 1)
+            a.gpuCapPercent?.let { Text("gpu $it", style = ValueStyle, color = capColor(it), softWrap = false, maxLines = 1) }
         }
         if (showClocks) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Bottom) {
-                Text("CLK", fontSize = 8.sp, color = muted)
-                Text(a.cpuClusters.joinToString("/") { ghz(it.mhz) }, fontSize = 10.sp, color = primary)
-                a.gpuMhz?.let { Text("· ${ghz(it)} G", fontSize = 10.sp, color = tertiary) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
+                Text("clk", style = LabelStyle, softWrap = false)
+                Text(a.cpuClusters.joinToString(" / ") { ghz(it.mhz) } + (a.gpuMhz?.let { " · gpu ${ghz(it)}" } ?: ""), style = ValueStyle, color = OsdInk2, softWrap = false, maxLines = 1)
             }
         }
     }
 }
 
 @Composable
-private fun BigFps(fps: Float?) {
-    Text(
-        text = fpsText(fps),
-        style = TextStyle(
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Black,
-            color = MaterialTheme.colorScheme.primary,
-            shadow = Shadow(color = Color.Black, blurRadius = 6f),
-        ),
-    )
-}
-
-@Composable
-private fun Inline(label: String, value: String, color: Color) {
-    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(label, fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = color)
-    }
-}
-
-@Composable
-private fun Metric(label: String, value: String, unit: String, color: Color) {
-    Column(horizontalAlignment = Alignment.Start) {
-        Text(label, fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-            Text(value, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = color)
-            Text(unit, fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun Metric(label: String, value: String, unit: String, color: Color = OsdInk) {
+    Column(horizontalAlignment = Alignment.Start, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+        Text(label, style = LabelStyle)
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(value, style = ValueStyle, color = color)
+            if (unit.isNotEmpty()) Text(unit, style = LabelStyle)
         }
     }
 }
 
 @Composable
 private fun CoreBars(values: List<Int>, color: Color, modifier: Modifier) {
-    val muted = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+    val track = Color(0x1F_FFFFFF)
     Canvas(modifier) {
         val n = values.size
         if (n == 0) return@Canvas
@@ -438,8 +364,7 @@ private fun CoreBars(values: List<Int>, color: Color, modifier: Modifier) {
         val barW = ((size.width - gap * (n - 1)) / n).coerceAtLeast(1f)
         values.forEachIndexed { i, v ->
             val x = i * (barW + gap)
-            // faint full-height track + filled portion
-            drawRect(color = muted, topLeft = Offset(x, 0f), size = Size(barW, size.height))
+            drawRect(color = track, topLeft = Offset(x, 0f), size = Size(barW, size.height))
             val h = size.height * (v / 100f).coerceIn(0f, 1f)
             drawRect(color = color, topLeft = Offset(x, size.height - h), size = Size(barW, h))
         }
@@ -451,20 +376,19 @@ private fun Sparkline(values: List<Float>, color: Color, modifier: Modifier) {
     if (values.size < 2) return
     val min = values.minOrNull() ?: return
     val max = values.maxOrNull() ?: return
-    // Use a minimum span so small frame-to-frame jitter doesn't get amplified into a "seismograph".
     val range = (max - min).coerceAtLeast(15f)
     Canvas(modifier) {
         val stepX = size.width / (values.size - 1)
         var prev: Offset? = null
         values.forEachIndexed { i, v ->
             val p = Offset(i * stepX, size.height - ((v - min) / range) * size.height)
-            prev?.let { drawLine(color, it, p, strokeWidth = 2f) }
+            prev?.let { drawLine(color, it, p, strokeWidth = 1.5f) }
             prev = p
         }
     }
 }
 
-// ── formatting / color helpers ──────────────────────────────────────────────
+// ── formatting / colour helpers ──────────────────────────────────────────────
 
 private fun num(v: Int?): String = v?.toString() ?: "—"
 private fun pct(v: Int?): String = v?.toString() ?: "—"
@@ -472,7 +396,7 @@ private fun fmt1(v: Float?): String = v?.let { String.format(java.util.Locale.US
 private fun ghz(mhz: Int?): String = mhz?.let { String.format(java.util.Locale.US, "%.2f", it / 1000f) } ?: "—"
 private fun fpsText(fps: Float?): String = fps?.takeIf { it > 0f }?.roundToInt()?.toString() ?: "—"
 
-/** Battery time-left: "2h14m" / "47m", or "—" when not estimable (charging, idle draw, unknown capacity). */
+/** "2h14m" / "47m", or "—" when not estimable (charging, idle draw, unknown capacity). */
 private fun leftText(minutes: Int?): String {
     val m = minutes ?: return "—"
     val h = m / 60
@@ -480,14 +404,13 @@ private fun leftText(minutes: Int?): String {
     return if (h > 0) "${h}h${mm}m" else "${mm}m"
 }
 
-/** Power readout: "3.4" (system draw on battery) or "⚡18.5" (charge rate while plugged in); "—" when unknown. */
+/** "3.4" (system draw on battery) or "⚡18.5" (charge rate while plugged in); "—" when unknown. */
 private fun powerValue(stats: OverlayStats): String {
     val v = stats.powerDrawW?.let { String.format(java.util.Locale.US, "%.1f", it) } ?: return "—"
     return if (stats.powerIsCharging) "⚡$v" else v
 }
 
-// Mirrors AutoTuneController.THERMAL_C (the hard thermal trip): the pill must light when the controller
-// starts thermal-limping, not 5 °C later — keep these two in sync.
+// Mirrors AutoTuneController.THERMAL_C (the hard thermal trip).
 private const val THROTTLE_TEMP_C = 85
 private fun isThrottling(t: TelemetrySnapshot): Boolean =
     (t.cpuTempC ?: 0) >= THROTTLE_TEMP_C || (t.gpuTempC ?: 0) >= THROTTLE_TEMP_C
@@ -495,10 +418,8 @@ private fun isThrottling(t: TelemetrySnapshot): Boolean =
 private fun tempColor(c: Int?): Color = meterTempColor(c)
 private fun loadColor(p: Int?): Color = meterLoadColor(p)
 
-// AutoTDP caps: a trimmed domain (below 100%) is the savings — show it green; full clocks stay neutral.
-@Composable
-private fun capColor(percent: Int): Color =
-    if (percent >= 100) MaterialTheme.colorScheme.onSurface else MeterCool
+// AutoTDP caps: a trimmed domain (below 100 %) is the savings — sage; full clocks stay ink.
+private fun capColor(percent: Int): Color = if (percent >= 100) OsdInk else MeterCool
 
 private fun formatTimer(ms: Long): String {
     val s = ms / 1000

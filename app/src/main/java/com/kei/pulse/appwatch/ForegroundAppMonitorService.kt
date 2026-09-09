@@ -1279,7 +1279,9 @@ class ForegroundAppMonitorService : Service() {
         overlayMinutesDischarging = telemetry.isDischarging
         overlayMinutesEma = smoothMinutes(overlayMinutesEma, rawMinutes, MINUTES_SMOOTH_ALPHA)
         val minutesLeft = displayMinutes(overlayMinutesEma)
+        val liveSession = com.kei.pulse.data.SessionFeed.current.value?.takeIf { it.isLive }
         return OverlayStats(
+            gameLabel = liveSession?.label,
             telemetry = telemetry,
             fps = fps,
             sessionElapsedMs = sessionElapsedMs(),

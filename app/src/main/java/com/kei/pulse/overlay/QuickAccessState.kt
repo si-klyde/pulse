@@ -9,7 +9,6 @@ import com.kei.pulse.model.PowerTier
 import com.kei.pulse.model.RgbMode
 
 /** Rail tabs for the Quick Access Bar. */
-enum class QuickAccessTab { PERFORMANCE, FAN, RGB, OVERLAY, SYSTEM }
 
 /** A control event from the Quick Access panel. */
 sealed interface QuickAccessAction {

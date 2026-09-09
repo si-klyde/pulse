@@ -34,3 +34,29 @@ class QuickAccessNavTest {
         assertEquals(0, QuickAccessNav.clampItem(item = 3, itemCount = 0))
     }
 }
+
+class QuickAccessNavGroupTest {
+    private val starts = listOf(0, 3, 7)
+
+    @org.junit.Test
+    fun nextGroupFromInsideAGroupGoesToTheFollowingStart() {
+        org.junit.Assert.assertEquals(3, QuickAccessNav.moveGroup(1, 1, starts))
+        org.junit.Assert.assertEquals(7, QuickAccessNav.moveGroup(3, 1, starts))
+    }
+
+    @org.junit.Test
+    fun previousGroupFromInsideAGroupGoesToThePriorStart() {
+        org.junit.Assert.assertEquals(0, QuickAccessNav.moveGroup(5, -1, starts))
+    }
+
+    @org.junit.Test
+    fun wrapsAtBothEnds() {
+        org.junit.Assert.assertEquals(0, QuickAccessNav.moveGroup(8, 1, starts))
+        org.junit.Assert.assertEquals(7, QuickAccessNav.moveGroup(0, -1, starts))
+    }
+
+    @org.junit.Test
+    fun emptyGroupsPinZero() {
+        org.junit.Assert.assertEquals(0, QuickAccessNav.moveGroup(4, 1, emptyList()))
+    }
+}
