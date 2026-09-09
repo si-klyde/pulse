@@ -65,6 +65,32 @@ Result: 399 tests, lint clean, APK builds, installed and screenshotted on RP6 (t
 - Overlay/OSD and Quick Access bar keep their own compact styling (`QaColors`, 10 sp caps labels).
 - App icon / launcher branding untouched until the name is decided.
 
+## Branch: `feat/rp6-shell` — IN PROGRESS, on-device checked (RP6)
+
+Design locked 2026-09-09 (canvas: https://claude.ai/code/artifact/c38dff72-c679-4408-8e7c-c58b9c2c03f4, page "RP6 design").
+Device truth: the RP6 renders at ~831×467 dp (1080p, density ≈2.3), not 960×540 — fixed columns sized to that.
+
+Done:
+- Theme: true black housing, ink at three luminances, no chromatic accent (selection = inverted fill); colour only
+  for the meter ramp. Bricolage Grotesque (text) + Azeret Mono (numbers), variable OFL fonts, tabular figures.
+- `ui/shell/`: `RailShell` (header with title/status + `HeroTrace` + fps/ms/W readouts; six-item `Rail`; section slot;
+  `LiveColumn` with clocks-over-ceiling, per-cluster CPU bar, temp gauges w/ 70°/90° ticks, fan, battery),
+  `Controls` (Seg, SegRow, OptionCard, HairRow, InkToggle/PulseSwitch, FactsRow).
+- `ui/sections/PowerSection` (Auto | Manual; Auto = frame rate, lean w/ watt caps, aggressive park, facts row; Manual
+  hosts the existing tier/clock modules), `FanSection` (mode row + live duty, AutoTDP note, Custom editor).
+- Per game → `PerAppScreen(embedded)`; Overlay / Lights / System → `SettingsScreen(embedded, only = …)`.
+- ViewModel: `telemetry` StateFlow (1 s), `drawHistory` (60 samples), `fanDuty` (2 s), all WhileSubscribed.
+- MainActivity: section state replaces the two screen booleans; Back returns to Power.
+
+Next (in order):
+1. FPS into the header trace + readouts: the watcher's `FpsReader` samples live in the same process — publish
+   them through a process-wide flow the ViewModel can read (frame-time history, current fps, AutoTDP action).
+2. Overlays (Phase C): OSD on smoke surfaces at real sizes; Quick Access as one column (brightness/volume first,
+   Power, Fan, Overlay, Lights), no tab rail.
+3. Remaining Material widgets: RadioButton rows → Seg, Slider colours, per-app rows → hairline list with rule
+   summary, `Per game · edit` sheet per the board, Lights section per board, System `About` copy.
+4. Tier cards in Manual → `OptionCard`; PolicyCard → slim slider rows.
+
 ## Pre-existing issues found (not caused by this fork; candidates for later branches)
 
 1. **Low-memory kills.** During a heavy game Android's LMK killed PULSE 6× in 14 s (RSS ~150–167 MB,
@@ -88,6 +114,7 @@ Result: 399 tests, lint clean, APK builds, installed and screenshotted on RP6 (t
 
 1. ~~`fix/root-exec-hardening`~~ — done.
 1b. ~~`feat/quiet-instrument-theme`~~ — done.
+1c. `feat/rp6-shell` — in progress (see above).
 2. `feat/ci-run-tests` — add `testDebugUnitTest lintDebug` to the workflow.
 3. `fix/rgb-original-capture` — issue 2 above.
 4. `perf/telemetry-direct-read` — issue 3 above (battery).
