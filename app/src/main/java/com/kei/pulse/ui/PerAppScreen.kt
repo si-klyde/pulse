@@ -25,6 +25,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.background
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -155,7 +161,12 @@ fun PerAppScreen(
                     loaded.filter { it.label.contains(query, ignoreCase = true) }
                 }
                 val sorted = filtered.sortedByDescending { configsByPackage.containsKey(it.packageName) }
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Games with their own rules win over Power while they are in front. Tap a game to set or change them.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(0.dp)) {
                     items(sorted, key = { it.packageName }) { app ->
                         val rowConfig = configsByPackage[app.packageName]
                         PerAppRow(
@@ -199,20 +210,22 @@ fun PerAppScreen(
 }
 
 private fun bindingSummary(config: PerAppConfig?, profiles: List<PerformanceProfile>): String {
-    if (config == null) return "Not configured"
+    if (config == null) return "Follows Power"
     val parts = mutableListOf<String>()
     when {
         config.profileBinding == null -> {}
-        PerAppConfig.isAuto(config.profileBinding) ->
-            parts += "AutoTDP" + (config.fpsTarget?.let { " ${PerAppConfig.fpsTargetLabel(it)}fps" } ?: "") +
-                when (config.aggressivePark) { true -> " · Park"; false -> " · No-park"; null -> "" }
-        else -> PerAppConfig.tierFromBinding(config.profileBinding)?.let { parts += it.label }
-            ?: run { parts += profiles.firstOrNull { it.id == config.profileBinding }?.name ?: "Saved profile" }
+        PerAppConfig.isAutoOff(config.profileBinding) -> parts += "Off · runs stock"
+        PerAppConfig.isAuto(config.profileBinding) -> {
+            parts += "Auto" + (config.fpsTarget?.let { " · hold ${PerAppConfig.fpsTargetLabel(it)}" } ?: "")
+            config.bias?.let { parts += it.label }
+            if (config.aggressivePark == true) parts += "aggressive park"
+        }
+        else -> PerAppConfig.tierFromBinding(config.profileBinding)?.let { parts += "Manual · ${it.label} tier" }
+            ?: run { parts += "Manual · ${profiles.firstOrNull { it.id == config.profileBinding }?.name ?: "saved setup"}" }
     }
-    config.fanMode?.let { parts += "Fan ${FanController.labelFor(it)}" }
-    // Refresh rate only matters for non-AutoTDP bindings (AutoTDP forces max).
-    if (!PerAppConfig.isAuto(config.profileBinding)) config.refreshRateHz?.let { parts += "${it}Hz" }
-    return if (parts.isEmpty()) "Not configured" else parts.joinToString(" · ")
+    config.fanMode?.let { parts += "fan ${FanController.labelFor(it)}" }
+    if (!PerAppConfig.isAuto(config.profileBinding)) config.refreshRateHz?.let { parts += "$it Hz" }
+    return if (parts.isEmpty()) "Follows Power" else parts.joinToString(" · ")
 }
 
 /** "3h 51m" style runtime from a full battery at the given sustained draw. */
@@ -233,76 +246,66 @@ private fun PerAppRow(
     onClick: () -> Unit,
 ) {
     val configured = config != null
-    val accent = MaterialTheme.colorScheme.primary
-    Surface(
-        color = if (configured) accent.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.large,
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(
-                1.dp,
-                if (configured) accent else MaterialTheme.colorScheme.outline,
-                MaterialTheme.shapes.large,
-            )
-            .clickable(onClick = onClick),
-    ) {
+    Column {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outlineVariant))
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            app.icon?.let { icon ->
-                Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(38.dp))
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = app.label,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                )
-                Text(
-                    text = bindingSummary(config, profiles),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (configured) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
-                // AutoTDP learning status: once a session converges, this app's operating point is saved and
-                // warm-started next launch — so it starts already tuned instead of re-discovering from scratch.
-                tuned?.let {
+            app.icon?.let { icon -> Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(40.dp)) }
+                ?: Box(Modifier.size(40.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest))
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = if (it) "✓ tuned" else "learning…",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (it) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = app.label,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                     )
+                    if (tuned == true) {
+                        Text(
+                            "learned",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outline).padding(horizontal = 6.dp, vertical = 1.dp),
+                        )
+                    }
                 }
+                Text(
+                    text = bindingSummary(config, profiles) + if (tuned == false) " · learning" else "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (configured) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.outlineVariant,
+                    maxLines = 1,
+                )
             }
             val peakW = config?.measuredPeakW ?: 0f
             val avgW = config?.measuredAvgW ?: 0f
-            // Headline the realistic AVERAGE draw (falls back to peak until an average accrues) so the number
-            // matches the basis of the battery-life estimate shown right below it.
             val drawW = if (avgW > 0f) avgW else peakW
             if (drawW > 0f) {
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = String.format(java.util.Locale.US, "AVG PW DRAW %.1f W", drawW),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.tertiary,
+                        text = String.format(java.util.Locale.US, "%.1f W", drawW),
+                        style = com.kei.pulse.ui.theme.ReadoutSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                     )
                     if (batteryCapacityWh > 0f) {
-                        // Runtime from the same average draw — the realistic figure.
                         Text(
                             text = "≈ ${formatRuntime(batteryCapacityWh, drawW)}",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                         )
                     }
                 }
             }
+            Icon(
+                Icons.Rounded.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
 }
