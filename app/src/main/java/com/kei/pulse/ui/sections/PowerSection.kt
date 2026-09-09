@@ -19,6 +19,7 @@ import com.kei.pulse.model.AutoTdpBias
 import com.kei.pulse.ui.shell.FactsRow
 import com.kei.pulse.ui.shell.HairRow
 import com.kei.pulse.ui.shell.InkToggle
+import com.kei.pulse.ui.shell.Note
 import com.kei.pulse.ui.shell.OptionCard
 import com.kei.pulse.ui.shell.Seg
 import com.kei.pulse.ui.shell.SegRow
@@ -44,9 +45,14 @@ fun PowerSection(
     displaySummary: String,
     fanSummary: String,
     perGameCount: Int,
+    refreshRate: Int?,
+    refreshRates: List<Int>,
+    onSelectRefreshRate: (Int) -> Unit,
+    compatible: Boolean,
     manualContent: @Composable () -> Unit,
 ) {
     Column(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        if (!compatible) Note("This device does not expose the PServer service PULSE needs. Nothing here can be applied.")
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(Modifier.weight(1f, fill = false), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Seg("Auto", autoOn, { onAutoChange(true) }, height = 40)
@@ -79,6 +85,9 @@ fun PowerSection(
                         onClick = { onBiasChange(b) },
                     )
                 }
+            }
+            SegRow("Refresh rate", height = 40) {
+                refreshRates.forEach { hz -> Seg("$hz Hz", refreshRate == hz, { onSelectRefreshRate(hz) }) }
             }
             HairRow("Aggressive park", "Sleep idle prime cores harder · saves power, may stutter", height = 48) {
                 InkToggle(aggressivePark, onAggressiveParkChange)

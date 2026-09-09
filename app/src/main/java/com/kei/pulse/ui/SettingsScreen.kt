@@ -75,14 +75,6 @@ import com.kei.pulse.model.PerformanceProfile
 import com.kei.pulse.model.TileInteractionBehavior
 import kotlin.math.roundToInt
 
-private val accentColorOptions = listOf(
-    0xFF3F51B5.toInt(),
-    0xFF006E1C.toInt(),
-    0xFFB3261E.toInt(),
-    0xFF8E24AA.toInt(),
-    0xFF00639A.toInt(),
-    0xFF9A4600.toInt(),
-)
 
 @Composable
 fun SettingsScreen(
@@ -677,52 +669,6 @@ private fun SleepProfileSelector(
     }
 }
 
-@Composable
-private fun ThemeModeSelector(
-    selected: AppColorSource,
-    onChange: (AppColorSource) -> Unit,
-    selectedAccentColor: Int,
-    onAccentColorChange: (Int) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        ThemeModeOption(
-            title = "System colors",
-            selected = selected == AppColorSource.SYSTEM,
-            onClick = { onChange(AppColorSource.SYSTEM) },
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            RadioButton(
-                selected = selected == AppColorSource.CUSTOM_ACCENT,
-                onClick = { onChange(AppColorSource.CUSTOM_ACCENT) },
-            )
-            Text(
-                text = "Custom",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(start = 8.dp),
-            )
-            Row(
-                modifier = Modifier.padding(start = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                accentColorOptions.forEach { accentColor ->
-                    AccentSwatch(
-                        color = Color(accentColor),
-                        selected = selectedAccentColor == accentColor,
-                        onClick = {
-                            onChange(AppColorSource.CUSTOM_ACCENT)
-                            onAccentColorChange(accentColor)
-                        },
-                    )
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun ThemeModeOption(

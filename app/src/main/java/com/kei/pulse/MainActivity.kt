@@ -32,6 +32,7 @@ import com.kei.pulse.tile.QuickSettingsTilePrompt
 import com.kei.pulse.tile.QuickSettingsTileRefresher
 import com.kei.pulse.ui.FanCurveEditorBindings
 import com.kei.pulse.ui.MainTunerScreen
+import com.kei.pulse.ui.ScreenNotifications
 import com.kei.pulse.ui.PerAppScreen
 import com.kei.pulse.ui.SettingsScreen
 import com.kei.pulse.ui.TunerViewModel
@@ -162,6 +163,8 @@ class MainActivity : ComponentActivity() {
                     // System / controller back navigates out of sub-screens instead of exiting.
                     BackHandler(enabled = section != Section.POWER) { sectionOrdinal = Section.POWER.ordinal }
 
+                    ScreenNotifications(state = state, onStatusMessageShown = viewModel::consumeStatusMessage, onErrorMessageShown = viewModel::consumeErrorMessage)
+                    LaunchedEffect(Unit) { viewModel.refreshSystemControls() }
                     RailShell(
                         section = section,
                         onSelectSection = { sectionOrdinal = it.ordinal },
@@ -356,6 +359,10 @@ class MainActivity : ComponentActivity() {
                                 ).joinToString(" · "),
                                 fanSummary = com.kei.pulse.data.FanController.labelFor(fanMode),
                                 perGameCount = perAppConfigs.size,
+                                refreshRate = refreshRate,
+                                refreshRates = com.kei.pulse.data.RefreshRateController.RATES,
+                                onSelectRefreshRate = viewModel::setRefreshRate,
+                                compatible = state.isPServerAvailable || state.isLoading,
                                 manualContent = tuner,
                             )
                         } else {

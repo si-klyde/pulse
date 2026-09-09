@@ -239,7 +239,7 @@ fun MainTunerScreen(
                 // AutoTDP manages the governor + clocks itself; the fan stays user-configurable but only
                 // Custom is honoured in-session (cascaded), every other mode runs as Smart — the module
                 // says so while AutoTDP is on. Only the governor hides while AutoTDP is on.
-                FanModule(currentMode = fanMode, onSelect = onSelectFanMode, editor = fanCurveEditor, autoTdpOn = autoTdpEnabled)
+                if (!hideAutoTdp) FanModule(currentMode = fanMode, onSelect = onSelectFanMode, editor = fanCurveEditor, autoTdpOn = autoTdpEnabled)
                 if (!autoTdpEnabled) {
                     GovernorModule(current = governor, onSelect = onSelectGovernor)
                 }
@@ -463,7 +463,7 @@ private fun LoadingClustersCard() {
 }
 
 @Composable
-private fun ScreenNotifications(
+fun ScreenNotifications(
     state: TunerState,
     onStatusMessageShown: () -> Unit,
     onErrorMessageShown: () -> Unit,
