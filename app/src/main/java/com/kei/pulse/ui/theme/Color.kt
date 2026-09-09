@@ -3,7 +3,7 @@ package com.kei.pulse.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // RP6 design: true black housing (zero-power pixels on the AMOLED), white ink at three luminances, and
-// colour ONLY where it means something — the meter ramp for heat/load/battery in overlay/MeterColors.
+// colour ONLY where it means something, the meter ramp for heat/load/battery in overlay/MeterColors.
 val Housing  = Color(0xFF000000) // app background
 val Rule     = Color(0xFF1C1C1C) // hairlines
 val Rule2    = Color(0xFF2A2A2A) // control outlines, track backgrounds

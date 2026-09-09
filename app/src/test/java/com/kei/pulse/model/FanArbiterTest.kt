@@ -5,12 +5,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Truth table for the fan arbitration — the pure resolver behind the service's `reassertManagedFan`.
+ * Truth table for the fan arbitration, the pure resolver behind the service's `reassertManagedFan`.
  * This decision used to be imperative service code whose release path silently assumed "the fan is already
  * at the vendor default" (a no-op unless a Custom loop was running), so turning the Fan card OFF left the
  * last managed mode stuck forever. The table pins today's verified behavior AND the release-normalize rule.
  *
- * Read-cost contract: rows where the decision must NOT need a fan_mode read pass a throwing [readLiveMode] —
+ * Read-cost contract: rows where the decision must NOT need a fan_mode read pass a throwing [readLiveMode],
  * the fan reconcile shares the PServer lock with AutoTDP re-asserts, so needless per-tick reads are a
  * documented regression class.
  */

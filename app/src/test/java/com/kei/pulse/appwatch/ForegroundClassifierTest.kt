@@ -5,7 +5,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Truth table for [ForegroundClassifier] — the neutral-foreground guard behind "the OSD must not pop up
+ * Truth table for [ForegroundClassifier], the neutral-foreground guard behind "the OSD must not pop up
  * over Settings" and "the global-default AutoTDP must not bind to a Settings screen".
  */
 class ForegroundClassifierTest {

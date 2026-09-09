@@ -14,7 +14,7 @@ enum class TileInteractionBehavior {
 /**
  * One toggleable item on the in-game overlay. The user picks which of these show via per-element switches;
  * a [OverlayPreset] is just a one-tap bundle of them. Some items only render in the denser layouts
- * (e.g. [CORE_BARS]/[SOC_NAME] are Full-only, [FPS_TREND]'s sparkline is Full) — the layout decides how an
+ * (e.g. [CORE_BARS]/[SOC_NAME] are Full-only, [FPS_TREND]'s sparkline is Full), the layout decides how an
  * enabled item is drawn, the set decides whether it's drawn at all.
  */
 enum class OverlayElement(val label: String) {
@@ -65,7 +65,7 @@ enum class OverlayPreset(val label: String, val elements: Set<OverlayElement>) {
 /**
  * RGB joystick-LED mode (AYN / Retroid handhelds that expose the vendor joystick-LED keys). OFF leaves the LED
  * to the system; BATTERY/HEAT are automatic "info LED" mappings (green→red as battery drains; blue→red as it
- * heats); MANUAL is full per-stick control — color, saturation and brightness, per [RgbStick].
+ * heats); MANUAL is full per-stick control, color, saturation and brightness, per [RgbStick].
  */
 enum class RgbMode(val label: String) {
     OFF("Off"),
@@ -87,7 +87,7 @@ data class AppSettings(
     val tileTapBehavior: TileInteractionBehavior = TileInteractionBehavior.SHOW_DIALOG,
     /**
      * Master switch. When false, PULSE hands every control back to manufacturer stock (uncapped clocks,
-     * Smart fan, restored governor/refresh) and its background service fully stops — the clean "system is in
+     * Smart fan, restored governor/refresh) and its background service fully stops, the clean "system is in
      * control" state to leave the device in before uninstalling. Default on.
      */
     val pulseEnabled: Boolean = true,
@@ -114,7 +114,7 @@ data class AppSettings(
     /** Global default AutoTDP frame-rate target (fps); `0` = Max. Per-app bindings can override it. */
     val autoTdpFpsTarget: Int = 60,
     /**
-     * AutoTDP aggressive park: offline the prime cores when they aren't the limiter. Defaults ON — the
+     * AutoTDP aggressive park: offline the prime cores when they aren't the limiter. Defaults ON, the
      * prime can't be frequency-scaled below the vendor floor mid-game, so parking is its only power lever,
      * and it auto-unparks the instant fps dips. Per-app profiles can override.
      */
@@ -127,7 +127,7 @@ data class AppSettings(
     val chargeWhileScreenOff: Boolean = true,
     /**
      * Quick Access Bar (EXPERIMENTAL, default OFF). A right-docked in-game panel to swap PULSE settings
-     * live, à la the Steam Deck Quick Access menu. Opt-in only — nothing shows unless this is on.
+     * live, à la the Steam Deck Quick Access menu. Opt-in only, nothing shows unless this is on.
      */
     val quickAccessEnabled: Boolean = false,
     /** Show the floating handle for the Quick Access bar. Off = combo-only (no on-screen arrow). */
@@ -154,7 +154,7 @@ data class AppSettings(
     val fanResponseStep: Int = FanCurve.DEFAULT_SLEW,
     val fanBias: Int = 0,
     // Smart (closed-loop) Custom fan: a PI controller holds the SoC at [fanTargetTempC] with minimum noise,
-    // instead of the static curve. On by default — it's the self-adapting "scientific" mode; toggle off to
+    // instead of the static curve. On by default, it's the self-adapting "scientific" mode; toggle off to
     // hand-edit the curve. Inert unless the fan mode is FanController.CUSTOM (Odin 3 / RP6 / Thor).
     val fanSmartEnabled: Boolean = true,
     val fanTargetTempC: Int = FanTempController.DEFAULT_TARGET_C,

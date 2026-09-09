@@ -78,7 +78,7 @@ class MainActivity : ComponentActivity() {
     private val perAppNotificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) {
-        // Enable regardless of the grant — the watcher works without notifications; the user
+        // Enable regardless of the grant, the watcher works without notifications; the user
         // just won't see switch notices if they declined.
         viewModel.setPerAppEnabled(true) {
             ForegroundAppMonitorService.start(this)
@@ -120,7 +120,7 @@ class MainActivity : ComponentActivity() {
                     val section = Section.entries[sectionOrdinal]
                     val telemetry = viewModel.telemetry.collectAsStateWithLifecycle().value
                     val recap = viewModel.recap.collectAsStateWithLifecycle().value
-                    // Vendor charging keys are ordinary Settings.System values — poll them while the screen is up.
+                    // Vendor charging keys are ordinary Settings.System values, poll them while the screen is up.
                     val chargingKeys = androidx.compose.runtime.produceState<Pair<Boolean?, Boolean?>>(initialValue = null to null) {
                         while (true) {
                             fun key(k: String): Boolean? = runCatching { android.provider.Settings.System.getInt(contentResolver, k) == 1 }.getOrNull()
@@ -163,7 +163,7 @@ class MainActivity : ComponentActivity() {
                     val perAppSwitchNotices = viewModel.perAppSwitchNotices.collectAsStateWithLifecycle().value
 
                     // Existing per-app bindings must engage on launch even if the master toggle was never
-                    // flipped — the watcher self-stops if nothing needs it. (Per-app comes first.)
+                    // flipped, the watcher self-stops if nothing needs it. (Per-app comes first.)
                     // Same rule as the boot / package-replaced receiver: if anything needs the watcher (overlay,
                     // quick access, AutoTDP, per-game rules, global fan/RGB), make sure it is running whenever the
                     // app opens. A force-stop (or an install over the top) kills the service and drops the
@@ -406,12 +406,12 @@ class MainActivity : ComponentActivity() {
     private var pendingOverlayEnable = false
     private var pendingQuickAccessEnable = false
 
-    // Set when AutoTDP (global default) is flipped on without Usage access — same bounce/return flow.
+    // Set when AutoTDP (global default) is flipped on without Usage access, same bounce/return flow.
     private var pendingAutoTdpEnable = false
 
     override fun onResume() {
         super.onResume()
-        // PULSE's UI is on screen — the OSD must never draw over it (a focused text field makes the foreground
+        // PULSE's UI is on screen, the OSD must never draw over it (a focused text field makes the foreground
         // probe report the keyboard's package, which used to leak the OSD over our own settings).
         ForegroundAppMonitorService.uiInForeground = true
         if (pendingPerAppEnable) {
@@ -467,7 +467,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
-        // PULSE left the screen — the OSD may resume over real games again.
+        // PULSE left the screen, the OSD may resume over real games again.
         ForegroundAppMonitorService.uiInForeground = false
     }
 
@@ -534,7 +534,7 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Master switch. ON resumes management; OFF makes the service hand everything back to manufacturer stock
-     * and stop itself. Starting the service on OFF is intentional — it's how the revert gets a root context
+     * and stop itself. Starting the service on OFF is intentional, it's how the revert gets a root context
      * (the service runs once, reverts, then stopSelf via the pulseEnabled guard in pollLoop).
      */
     private fun onPulseMasterToggle(enabled: Boolean) {
@@ -614,7 +614,7 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Quick Access bar (experimental) — needs the same two permissions as the OSD (it draws an overlay and
+     * Quick Access bar (experimental), needs the same two permissions as the OSD (it draws an overlay and
      * reads the foreground app), and must START the watcher when enabled, mirroring [setOverlayEnabled].
      * Without this, flipping the toggle only persisted the flag and the bar never appeared.
      */
@@ -693,7 +693,7 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Persist a per-app binding AND make sure the watcher runs so it actually engages — a saved binding
+     * Persist a per-app binding AND make sure the watcher runs so it actually engages, a saved binding
      * must take priority over the global mode (fixes "Custom still wins" when a per-app AutoTDP binding
      * was set but the watcher wasn't running). Prompts for Usage access if it's missing.
      */
@@ -706,7 +706,7 @@ class MainActivity : ComponentActivity() {
                 startActivity(android.content.Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS))
                 Toast.makeText(
                     applicationContext,
-                    "Per-app profiles need Usage access to detect the foreground app — allow it for PULSE.",
+                    "Per-app profiles need Usage access to detect the foreground app, allow it for PULSE.",
                     Toast.LENGTH_LONG,
                 ).show()
             }
@@ -740,7 +740,7 @@ class MainActivity : ComponentActivity() {
      * One-time prompt: if PULSE is meant to run (master switch on) but isn't exempt from battery
      * optimization, show the system "allow background running" dialog so its persistent watcher (global
      * Fan/RGB, AutoTDP, OSD) isn't throttled in Doze or reclaimed in the background. Asked once (persisted)
-     * so it never nags. NB: nothing can survive an explicit force-stop / recents-swipe — this only helps
+     * so it never nags. NB: nothing can survive an explicit force-stop / recents-swipe, this only helps
      * against Doze + background memory reclaim.
      */
     @android.annotation.SuppressLint("BatteryLife") // deliberate: a user-driven persistent tuner watcher

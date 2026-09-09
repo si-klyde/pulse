@@ -47,7 +47,7 @@ class QuickAccessOverlay(private val context: Context) {
     private var params: WindowManager.LayoutParams? = null
     private var actions: QuickAccessActions = QuickAccessActions { }
     // HAT-axis D-pad edge detection: these handhelds report the D-pad as ABS_HAT0X/Y (a MotionEvent axis),
-    // NOT KEYCODE_DPAD — confirmed by getevent on the Odin (M7). The generic-motion listener translates the hat
+    // NOT KEYCODE_DPAD, confirmed by getevent on the Odin (M7). The generic-motion listener translates the hat
     // to nav intents; these track the last quantized direction so a held press fires once and the centering
     // (0) event is ignored. Reset on each expand.
     private var lastHatX = 0
@@ -62,12 +62,12 @@ class QuickAccessOverlay(private val context: Context) {
 
     fun update(stats: OverlayStats) { statsFlow.value = stats }
     fun updateSettings(settings: AppSettings) { settingsFlow.value = settings }
-    /** The foreground game's per-app profile (null = none) — the Performance tab edits/reflects this. */
+    /** The foreground game's per-app profile (null = none), the Performance tab edits/reflects this. */
     fun updatePerApp(config: PerAppConfig?) { perAppFlow.value = config }
     /** Whether the floating handle is shown when collapsed (off = combo-only; window stays invisible). */
     fun updateShowHandle(show: Boolean) { showHandleFlow.value = show }
 
-    /** Programmatic open/close/toggle — used by the controller-combo trigger. */
+    /** Programmatic open/close/toggle, used by the controller-combo trigger. */
     fun open() = setExpanded(true)
     fun close() = setExpanded(false)
     fun toggle() = setExpanded(!expandedFlow.value)
@@ -147,7 +147,7 @@ class QuickAccessOverlay(private val context: Context) {
             host = newHost
             params = lp
             isShowing = true
-            // Honor a combo press that landed before the window existed (recent only — a stale request
+            // Honor a combo press that landed before the window existed (recent only, a stale request
             // must not pop the panel out of nowhere).
             val pending = pendingExpandAtMs
             pendingExpandAtMs = null
@@ -175,7 +175,7 @@ class QuickAccessOverlay(private val context: Context) {
         main.post {
             val lp = params
             if (lp == null) {
-                // Window not created yet — the old silent return here made a fast combo press do NOTHING.
+                // Window not created yet, the old silent return here made a fast combo press do NOTHING.
                 // Record the intent; show() applies it as soon as the window exists.
                 pendingExpandAtMs = if (expanded) System.currentTimeMillis() else null
                 return@post

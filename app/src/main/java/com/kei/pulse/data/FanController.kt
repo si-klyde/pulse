@@ -5,7 +5,7 @@ import com.kei.pulse.root.RootSupport
 
 /**
  * Fan control for the AYN Odin family via the stock `Settings.System` keys that the
- * device's own fan controller (com.odin.settings) reads. We do NOT write raw PWM — we set
+ * device's own fan controller (com.odin.settings) reads. We do NOT write raw PWM, we set
  * the same fan *mode* the stock app sets, so the stock thermal-safety curve stays in
  * charge. Confirmed on Odin 3: `fan_mode=4` is Smart (the stock default).
  *
@@ -18,13 +18,13 @@ class FanController {
 
     /**
      * Ensure the vendor fan controller is in manual passthrough ([CUSTOM]) so it stops regulating the duty.
-     * Read-first so we only write on drift (no spurious settings-change broadcasts) — a cheap re-assert vs the
+     * Read-first so we only write on drift (no spurious settings-change broadcasts), a cheap re-assert vs the
      * QS fan tile. Returns true if manual mode is (now) active.
      *
      * On the Odin the very ACT of writing `fan_mode=6` resets the duty node to a ~50% mode-init default
      * (verified on-device: write fan_mode=6 → duty jumps to 25000), so the fan audibly revs up before our
      * next PWM write lands. Pass [reassertDuty] to pin the intended duty in the SAME root command as the mode
-     * write — the trailing echo overwrites the 50% default before it can spin the fan up. Harmless where the
+     * write, the trailing echo overwrites the 50% default before it can spin the fan up. Harmless where the
      * firmware doesn't reset (RP6/Thor): it just re-writes the value the duty already holds.
      */
     fun ensureManualMode(reassertDuty: Int? = null): Boolean {
@@ -74,19 +74,19 @@ class FanController {
         /** Smart is the confirmed stock default and the safe fallback. */
         const val SMART = 4
         const val SPORT = 5
-        /** Silent (low fan) — the quiet bounce mode when re-applying Smart so the fan dips instead of revving. */
+        /** Silent (low fan), the quiet bounce mode when re-applying Smart so the fan dips instead of revving. */
         const val SILENT = 1
 
         /**
          * The intermediate mode [setMode] bounces through to force the stock controller to reload [target]
          * (it caches the active mode and won't re-apply the same one). Must differ from [target]. Reaching
          * SMART routes through SILENT (low fan) rather than SPORT (high fan), so handing the fan back to Smart
-         * — e.g. when AutoTDP restores it on game-exit — dips quietly instead of audibly revving the fan.
+         *, e.g. when AutoTDP restores it on game-exit, dips quietly instead of audibly revving the fan.
          */
         fun bounceModeFor(target: Int): Int = if (target == SMART) SILENT else SMART
 
         /**
-         * PULSE-driven custom fan curve (Odin 3 only). Not a stock fan_mode — when selected, the service
+         * PULSE-driven custom fan curve (Odin 3 only). Not a stock fan_mode, when selected, the service
          * drives the fan via [FanCurveController] (re-asserting the gpio5_pwm2/duty PWM node) instead of
          * writing fan_mode. Picked a value outside the stock 1/4/5 range so it can't collide.
          */
@@ -94,7 +94,7 @@ class FanController {
 
         // The Odin 3's fan is a MAX31760 driven via this vendor PWM node (NOT the stock Settings keys):
         //   duty (0..period, world-writable) = fan speed; period (=50000); speed = RPM tach (read).
-        // Writable on the Odin; absent on Thor/RP6 (different fan path) — gate on customFanAvailable.
+        // Writable on the Odin; absent on Thor/RP6 (different fan path), gate on customFanAvailable.
         const val FAN_DUTY_PATH = "/sys/class/gpio5_pwm2/duty"
         const val FAN_PERIOD_PATH = "/sys/class/gpio5_pwm2/period"
         const val FAN_SPEED_PATH = "/sys/class/gpio5_pwm2/speed"
@@ -112,7 +112,7 @@ class FanController {
             MODES.firstOrNull { it.value == mode }?.label ?: mode?.let { "Mode $it" } ?: "—"
 
         /**
-         * True wherever the firmware exposes the writable gpio5_pwm2 fan PWM node — confirmed on the Odin 3,
+         * True wherever the firmware exposes the writable gpio5_pwm2 fan PWM node, confirmed on the Odin 3,
          * Retroid Pocket 6, and AYN Thor (all expose `/sys/class/gpio5_pwm2/duty` 0..50000 + a `speed` RPM
          * tach; identical interface). Self-gates off on any device without the node.
          */

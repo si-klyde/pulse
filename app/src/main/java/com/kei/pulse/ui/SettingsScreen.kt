@@ -188,8 +188,8 @@ fun SettingsScreen(
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = "Off hands every control back to the manufacturer defaults — uncapped clocks, Smart fan, " +
-                            "stock governor and refresh rate — and stops the background service. Turn it off before uninstalling.",
+                        text = "Off hands every control back to the manufacturer defaults, uncapped clocks, Smart fan, " +
+                            "stock governor and refresh rate, and stops the background service. Turn it off before uninstalling.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -235,7 +235,7 @@ fun SettingsScreen(
         if (show("Charging") && chargingSupported) SettingsSection(title = "Charging") {
             ChargingRow(
                 title = "Charging separation",
-                caption = "While the screen is on, power comes from the charger and the battery is left alone — cooler and " +
+                caption = "While the screen is on, power comes from the charger and the battery is left alone, cooler and " +
                     "kinder to the cell. The vendor turns charging back on when the screen goes off.",
                 checked = chargingSeparation,
                 onChange = onChargingSeparationChange,
@@ -272,7 +272,7 @@ fun SettingsScreen(
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = "Puts your last tier or Custom limits back as soon as the device boots, before PULSE is opened. Auto does not need this — it takes over whenever a game is in front.",
+                        text = "Puts your last tier or Custom limits back as soon as the device boots, before PULSE is opened. Auto does not need this, it takes over whenever a game is in front.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -436,7 +436,7 @@ fun SettingsScreen(
                     )
                     Text(
                         text = "Adjust performance, fan, and lighting without leaving your game. Open the panel " +
-                            "with the edge handle or your controller shortcut — changes apply instantly.",
+                            "with the edge handle or your controller shortcut, changes apply instantly.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -736,7 +736,7 @@ private fun ManualRgbControls(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Left — stick target + L/R swatches
+        // Left, stick target + L/R swatches
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
                 text = "Stick",
@@ -797,13 +797,13 @@ private val PULSE_GLYPHS = listOf(
 )
 
 /**
- * The PULSE wordmark, made into the picker. P-U-L are a hue spectrum — drag across to choose colour. S-E are a
- * brightness ramp in the chosen hue — drag up/down to choose brightness. Equalizer bars above and below pulse.
+ * The PULSE wordmark, made into the picker. P-U-L are a hue spectrum, drag across to choose colour. S-E are a
+ * brightness ramp in the chosen hue, drag up/down to choose brightness. Equalizer bars above and below pulse.
  * Left ~3/5 (x < split) edits colour by x; right ~2/5 edits brightness by y. Commits on release.
  */
 /**
  * Two strips: hue (full spectrum) and brightness (black → the chosen hue). Tap or drag sets the value live;
- * the colour is committed to the sticks when the finger lifts. Square thumbs, hairline frames — same vocabulary
+ * the colour is committed to the sticks when the finger lifts. Square thumbs, hairline frames, same vocabulary
  * as every other control.
  */
 @Composable

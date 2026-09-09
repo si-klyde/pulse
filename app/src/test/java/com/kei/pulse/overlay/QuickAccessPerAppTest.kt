@@ -10,7 +10,7 @@ import org.junit.Test
 
 /**
  * Pure tests for the Quick Access bar's per-app targeting: the AutoTDP controls edit the FOREGROUND game's
- * per-app profile (creating one if needed) instead of the global default — so changing the frame target in
+ * per-app profile (creating one if needed) instead of the global default, so changing the frame target in
  * the bar actually takes effect for a game that has a per-app binding (bug: per-app fps overrode the global
  * the bar wrote). Fan/RGB/OSD remain global; those actions are NOT per-app.
  */
@@ -78,7 +78,7 @@ class QuickAccessPerAppTest {
             PerAppConfig.AUTO_BINDING,
             QuickAccessPerApp.applyPerAppAction(inheriting, pkg, QuickAccessAction.ToggleAutoTdp).profileBinding,
         )
-        // An explicitly-on app toggles to explicit OFF (not null — so it sticks even under a global ON).
+        // An explicitly-on app toggles to explicit OFF (not null, so it sticks even under a global ON).
         val on = PerAppConfig(packageName = pkg, profileBinding = PerAppConfig.AUTO_BINDING)
         assertEquals(
             PerAppConfig.AUTO_OFF_BINDING,

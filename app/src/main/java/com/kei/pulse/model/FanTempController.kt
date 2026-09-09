@@ -3,7 +3,7 @@ package com.kei.pulse.model
 import kotlin.math.roundToInt
 
 /**
- * Closed-loop temperature-target fan controller — the genuine control-theory approach to fan management.
+ * Closed-loop temperature-target fan controller, the genuine control-theory approach to fan management.
  *
  * Instead of a static temp→% lookup (open-loop, can't adapt to ambient / load / dust / aging), a **PI
  * controller** drives the fan duty to hold the SoC at [targetTempC]:
@@ -14,11 +14,11 @@ import kotlin.math.roundToInt
  *   overshoot slowly pulls the fan up until temp settles on target). This *automatically* uses the minimum
  *   fan needed: silent at the floor when cool, ramping exactly as much as required when hot.
  * - **Anti-windup** (conditional integration): the integral only accumulates when the output isn't pinned at
- *   a rail in the same direction — so after a long pin at 100% it recovers to quiet instantly, no overshoot.
+ *   a rail in the same direction, so after a long pin at 100% it recovers to quiet instantly, no overshoot.
  * - **Hard safety:** at/above [FanCurve.THERMAL_OVERRIDE_C] it forces 100% and dumps the integral.
  *
  * Gains default to robust, conservative values (the SoC thermal plant is slow, and the service's duty-slew
- * further smooths the output) — tuned on real hardware, not by pumping heat into the device. Pure +
+ * further smooths the output), tuned on real hardware, not by pumping heat into the device. Pure +
  * unit-tested; the service feeds it the live temp each tick and slews the fan toward the returned duty %.
  */
 class FanTempController(private val minSpinPercent: Int = FanCurve.MIN_PERCENT) {
@@ -59,7 +59,7 @@ class FanTempController(private val minSpinPercent: Int = FanCurve.MIN_PERCENT) 
         /** Integral gain (% fan per °C·s): slowly trims out a persistent overshoot to settle on target. */
         const val KI_DEFAULT = 0.15
 
-        /** Default target the controller holds the SoC at — cool enough to dodge throttling, still quiet. */
+        /** Default target the controller holds the SoC at, cool enough to dodge throttling, still quiet. */
         const val DEFAULT_TARGET_C = 78
 
         /** User-selectable target-temp band (Cooler ⟷ Quieter): lower = cooler+louder, higher = warmer+quieter. */

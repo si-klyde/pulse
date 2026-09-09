@@ -6,7 +6,7 @@ import kotlin.math.roundToInt
  * Coordinate mapping for the EVGA-style curve editor canvas. X = temperature (left→right over
  * [TEMP_MIN_C]..[TEMP_MAX_C]); Y = fan percent with 100% at the TOP (y=0) and 0% at the bottom (y=1),
  * the way a fan curve is conventionally drawn. Coordinates are normalized 0..1 so the Composable can
- * scale them to whatever canvas size it gets. Pure — the drawing/gestures are verified on-device.
+ * scale them to whatever canvas size it gets. Pure, the drawing/gestures are verified on-device.
  */
 object FanGraphGeometry {
     const val TEMP_MIN_C = 20

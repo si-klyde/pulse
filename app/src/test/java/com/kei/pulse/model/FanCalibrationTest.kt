@@ -6,8 +6,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Autocalibrate: an EVGA-style duty→RPM sweep is reduced to (a) the fan's real min-spin % — the lowest
- * duty that actually moves air on THIS unit — and (b) a recommended temp→% curve anchored to that
+ * Autocalibrate: an EVGA-style duty→RPM sweep is reduced to (a) the fan's real min-spin %, the lowest
+ * duty that actually moves air on THIS unit, and (b) a recommended temp→% curve anchored to that
  * min-spin. Pure; the live sweep (writing duty, reading the tach) is verified on-device.
  */
 class FanCalibrationTest {

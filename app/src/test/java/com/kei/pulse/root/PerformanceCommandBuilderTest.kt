@@ -8,7 +8,7 @@ import org.junit.Test
 /**
  * The apply-script builder is the single chokepoint that writes CPU `scaling_max/min_freq`. A non-positive
  * frequency (e.g. a malformed `selectableMaxFreq=0` from detection, or a reset/uninstall edge) must NEVER be
- * echoed to a sysfs freq node — the kernel rejects it / the result is undefined. Guard: skip the write for any
+ * echoed to a sysfs freq node, the kernel rejects it / the result is undefined. Guard: skip the write for any
  * value ≤ 0; valid values are emitted unchanged.
  */
 class PerformanceCommandBuilderTest {

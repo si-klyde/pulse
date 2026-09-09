@@ -14,10 +14,10 @@ import com.kei.pulse.root.RootSupport
  * The FPS we report is the **display's present cadence**, not any one app layer's submit rate. Many games
  * (and translation-layer/emulator surfaces) submit at one rate while the compositor *presents* at another
  * (frame pacing / smoothing); a per-layer `averageFPS` reads the submit rate (e.g. 63) while the screen is
- * actually presenting ~90 — which is what every comparison overlay shows. So we read the **global
+ * actually presenting ~90, which is what every comparison overlay shows. So we read the **global
  * `presentToPresent` histogram** (the legacy-stats block before any layer), take the weighted-mean present
  * interval → FPS (clamped to the panel's `displayRefreshRate`), and pull the **worst frametime** + a
- * **slow-frame count** (≥33 ms presents) from the same histogram — the frametime-stability signal AutoTDP
+ * **slow-frame count** (≥33 ms presents) from the same histogram, the frametime-stability signal AutoTDP
  * tunes against. The busiest layer's `averageFPS` is kept only as a fallback for firmware that doesn't
  * populate the global block.
  *
@@ -42,7 +42,7 @@ class FpsReader(private val context: Context) {
         val avgFps: Float,
         /** Recent per-read fps for the trend mini-graph (oldest first). */
         val recentFps: List<Float>,
-        /** Worst present-to-present interval in the last window (ms) — the stutter tail; null if unknown. */
+        /** Worst present-to-present interval in the last window (ms), the stutter tail; null if unknown. */
         val worstFrameTimeMs: Float? = null,
         /** Frames presented ≥33 ms apart in the last window (genuine hitches). */
         val jankFrames: Int = 0,
@@ -140,7 +140,7 @@ class FpsReader(private val context: Context) {
      * `AF` is the **display present rate** from the global `presentToPresent` histogram (weighted-mean
      * interval, idle bins ≥100 ms dropped, clamped to `displayRefreshRate`). `LF`/`LAF` are the busiest
      * non-`none` layer's frames + `averageFPS` (the submit-rate fallback). Note: the GLOBAL histogram is
-     * `presentToPresent` (camelCase); the per-layer one is `present2present` (digit) — we read the global.
+     * `presentToPresent` (camelCase); the per-layer one is `present2present` (digit), we read the global.
      */
     private fun timestatsScript(): String =
         """
@@ -180,7 +180,7 @@ class FpsReader(private val context: Context) {
 
     companion object {
         private const val TAG = "PulseFps"
-        // Logs the raw reduced TimeStats line each sample — leave on while the FPS path is being
+        // Logs the raw reduced TimeStats line each sample, leave on while the FPS path is being
         // verified on-device (adb logcat -s PulseFps); cheap (one short line per ~second).
         private const val DEBUG_LOG = true
         private const val SCRIPT_NAME = "fps-probe.sh"
@@ -192,7 +192,7 @@ class FpsReader(private val context: Context) {
         /**
          * Parses "FR <gFrames> AF <gFps> WORST <ms> SLOW <n> LF <lFrames> LAF <lFps>". Prefers the global
          * display present rate (`AF`); falls back to the busiest layer's submit rate (`LAF`) only when the
-         * global block is empty. Returns null when neither is usable. Pure — unit-tested.
+         * global block is empty. Returns null when neither is usable. Pure, unit-tested.
          */
         fun parseTimestats(out: String): TimeStatsSample? {
             val m = Regex(

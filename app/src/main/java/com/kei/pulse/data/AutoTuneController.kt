@@ -7,7 +7,7 @@ import com.kei.pulse.root.RootSupport
 import kotlin.math.abs
 
 /**
- * AutoTDP — holds a **user-set FPS target at the least power**, by regulating each clock domain against
+ * AutoTDP, holds a **user-set FPS target at the least power**, by regulating each clock domain against
  * live FPS *and* frame pacing:
  *
  *  - The panel is pinned to its **max refresh** (by the service) for latency; AutoTDP then trims clocks
@@ -17,7 +17,7 @@ import kotlin.math.abs
  *    (often "for free", with no FPS cost), then the GPU eases the rate down toward the target.
  *  - **Above** the target (with headroom) it trims; **below** the target it raises the binding domain
  *    (GPU first); **in-band** it holds. A trim that worsens **frame pacing** (more ≥33 ms hitches) is
- *    undone and that domain frozen one notch above its edge — the smoothness rail.
+ *    undone and that domain frozen one notch above its edge, the smoothness rail.
  *  - **Max** target (0) means uncapped: keep the clocks open, only thermal trims.
  *  - **Steady-render gate:** trimming + power-split learning only happen once the app has been
  *    *continuously* rendering for a few steps; a static/bursty screen (no FPS) holds and resets the gate.
@@ -26,7 +26,7 @@ import kotlin.math.abs
  *
  * It pairs with the Balanced CPU governor (forced by the service), which scales frequency to load *under*
  * the caps. Device writes go through [writeCaps]/[releaseCaps], which reuse [PerformanceCommandBuilder]
- * — the same path as the manual tiers — so the caps are written and then **locked read-only (`chmod
+ *, the same path as the manual tiers, so the caps are written and then **locked read-only (`chmod
  * 444`)**; otherwise the vendor perf/thermal daemon silently stomps `scaling_max_freq` back to full
  * (and the GPU's `min_pwrlevel` must be widened first or the cap snaps back). Unit tests inject no-ops
  * so the decision logic can be driven with FPS/jank sequences.
@@ -34,7 +34,7 @@ import kotlin.math.abs
  * **Aggressive park** (opt-in, [aggressivePark]): on heavy emulators the vendor perf HAL floors the
  * prime cluster's min frequency during gaming, so a frequency cap can't lower it. When the frame rate
  * is comfortably above target with the prime already trimmed to its floor (i.e. the prime isn't the
- * limiter), AutoTDP **offlines the prime cores** to drop their draw to zero — and re-onlines them the
+ * limiter), AutoTDP **offlines the prime cores** to drop their draw to zero, and re-onlines them the
  * instant FPS dips, jank rises, or it overheats/stalls. A cooldown after a failed park stops flapping.
  */
 class AutoTuneController(
@@ -71,7 +71,7 @@ class AutoTuneController(
     private var wBeforeTrim: Float? = null // draw (W) just before the last single-domain trim
     private val edged = HashSet<Int>() // policies whose further trimming costs frames/smoothness
     private var reprobeCounter = 0
-    private var gpuIdleStreak = 0 // consecutive steps the 3D GPU is idle (media) — drops its harvest floor
+    private var gpuIdleStreak = 0 // consecutive steps the 3D GPU is idle (media), drops its harvest floor
     private var steadyCount = 0 // consecutive steps with real, continuous rendering
     private var primeParked = false // prime cores currently offlined
     private var parkSteady = 0 // consecutive steps eligible to park (hysteresis)
@@ -93,7 +93,7 @@ class AutoTuneController(
     // instead of being re-trimmed to CPU_MIN every reprobe (the perf-cluster oscillation). Decays slowly.
     private val domainFloor = HashMap<Int, Int>()
     private var floorDecayCounter = 0
-    // Recovery lockout: a *sustained* dip/roughness means we've harvested into — or a scene change caused —
+    // Recovery lockout: a *sustained* dip/roughness means we've harvested into, or a scene change caused,
     // a real stutter. Stop harvesting, snap the caps back up to the last smooth point, and raise the limiter
     // (the saturated GPU first) until frames recover; then a learned-floor bump + a short cooldown prevent
     // an immediate relapse (the TRIM↔RAISE flip-flop that left fps at 42–55 for ~90 s in the field log).
@@ -106,7 +106,7 @@ class AutoTuneController(
     private var powerCooldown = 0 // ticks left suppressing fps-chase raises after the power ceiling fired (anti-bounce)
     private var frameTimeTailMs = -1f // worst present-to-present (ms) this step; -1 = unknown (margin gate)
     private var tailEma = 0f // EMA of the frametime tail; the gate acts on THIS (not the raw worst) so an
-    // isolated emulator spike doesn't trip it — only a sustained rough tail does. Smoothing + thresholds are
+    // isolated emulator spike doesn't trip it, only a sustained rough tail does. Smoothing + thresholds are
     // bias-scaled (see [gateParams]): EFFICIENT smooths hard + high thresholds (ignore jitter, harvest);
     // SMOOTH reacts fast + low thresholds (protect frames).
     private var marginOverStreak = 0 // consecutive holding-but-tail-over-budget steps (pre-raise confirm)
@@ -117,7 +117,7 @@ class AutoTuneController(
     private val lastGoodCaps = HashMap<Int, Int>() // caps at the last smooth, in-band operating point
     private val lockRaised = HashSet<Int>() // domains raised during this lockout (floor-pinned on exit)
 
-    /** Which clock domain is the bottleneck — protected from trimming, prioritized for raising. */
+    /** Which clock domain is the bottleneck, protected from trimming, prioritized for raising. */
     private enum class Bottleneck { NONE, CPU, GPU }
 
     /** From the busy% signals: the saturated domain (≥ [BOUND_THRESHOLD]); the higher one wins a tie. */
@@ -147,10 +147,10 @@ class AutoTuneController(
     /** True while the prime cores are offlined (for the overlay readout). */
     val isPrimeParked: Boolean get() = primeParked
 
-    /** True while the prime-walled settle is latched (fps target confirmed unreachable) — for the diagnostic log. */
+    /** True while the prime-walled settle is latched (fps target confirmed unreachable), for the diagnostic log. */
     val isPrimeWalled: Boolean get() = primeBoundLatched
 
-    /** How many domains are currently judged content-capped (raising them didn't move fps) — for the log. */
+    /** How many domains are currently judged content-capped (raising them didn't move fps), for the log. */
     val stalledDomainCount: Int get() = raiseStalled.size
 
     /** The current bottleneck domain, for the diagnostic log ("CPU"/"GPU"/"-"). */
@@ -232,15 +232,15 @@ class AutoTuneController(
      *
      * @param fps smoothed source frame rate (null/0 ⇒ not rendering → gate resets, holds)
      * @param jankFrames ≥33 ms presents in the last window (frame-pacing roughness)
-     * @param drawW live system draw (W) on battery, null while charging/unknown — across a single-domain
+     * @param drawW live system draw (W) on battery, null while charging/unknown, across a single-domain
      *   trim its delta is folded into [powerModel] to learn this SoC's CPU/GPU power split.
-     * @param cpuBusyPercent AGGREGATE CPU load (0..100) — the CPU bottleneck signal (so one busy thread
+     * @param cpuBusyPercent AGGREGATE CPU load (0..100), the CPU bottleneck signal (so one busy thread
      *   doesn't shield the whole CPU from trimming)
-     * @param gpuBusyPercent raw GPU busy% (0..100) — the GPU bottleneck signal. Together these decide
+     * @param gpuBusyPercent raw GPU busy% (0..100), the GPU bottleneck signal. Together these decide
      *   which domain is the limiter so AutoTDP protects it and only trims the one with slack (Bug 6).
-     * @param cpuPeakPercent busiest single CPU core (0..100) — used only as a guard so aggressive park
+     * @param cpuPeakPercent busiest single CPU core (0..100), used only as a guard so aggressive park
      *   won't offline a prime that's running a pegged render thread.
-     * @param worstFrameMs worst present-to-present interval (ms) in the last window — the frametime TAIL.
+     * @param worstFrameMs worst present-to-present interval (ms) in the last window, the frametime TAIL.
      *   The average rate can still read on-target while the tail creeps toward the frame budget right before a
      *   scene-transition misses; this lets the controller pre-empt the stutter instead of only reacting (via
      *   the jank lockout) after frames already dropped.
@@ -279,7 +279,7 @@ class AutoTuneController(
         notRenderingStreak = 0
         steadyCount++
         // Park gate: don't offline the prime until the game has actually settled into continuous play. A
-        // load renders erratically — frames stall and stutter, which resets steadyCount above — so it can
+        // load renders erratically, frames stall and stutter, which resets steadyCount above, so it can
         // never reach this run length; real gameplay (frame-capped or uncapped) sails past it. Latched for
         // the session so a mid-game stutter can't re-trigger the caution and block re-parking.
         if (steadyCount >= PARK_SETTLE_TICKS) sessionSettled = true
@@ -296,7 +296,7 @@ class AutoTuneController(
         }
         val rawBottleneck = computeBottleneck(cpuBusyPercent, gpuBusyPercent, cpuCorePeakPercent)
         // Hysteresis on a hot-thread CPU bottleneck: the hot core's load fluctuates around the detect
-        // threshold, and a momentary dip to NONE used to (mis)raise the GPU first — which, on an emulator
+        // threshold, and a momentary dip to NONE used to (mis)raise the GPU first, which, on an emulator
         // wave that no clock fixes, climbed the GPU to max for nothing (burned ~11 W / 50 °C). Hold CPU while
         // the core stays moderately busy AND the GPU isn't itself saturated, so the wave keeps feeding the
         // perf cluster instead of over-raising the GPU. A real GPU bottleneck (gpuBusy high) still overrides.
@@ -312,7 +312,7 @@ class AutoTuneController(
         // yet the vendor daemon pins the clock to whatever ceiling we allow. Once the GPU has been idle for a
         // sustained stretch, let it harvest below the responsive gaming floor toward its true min (≈160 MHz).
         // The streak's hysteresis keeps games (gpuBusy fluctuates) on the higher floor; on the first sign of
-        // real GPU work the floor — and the cap — snap back up so a heavy scene can still ramp quickly.
+        // real GPU work the floor, and the cap, snap back up so a heavy scene can still ramp quickly.
         policies.firstOrNull { it.isGpu }?.let { gpu ->
             val gpuIdle = (gpuBusyPercent ?: 100) <= GPU_IDLE_BUSY && bottleneck != Bottleneck.GPU
             gpuIdleStreak = if (gpuIdle) gpuIdleStreak + 1 else 0
@@ -339,17 +339,17 @@ class AutoTuneController(
     /**
      * Offline the prime cores when they're clearly not the limiter and let perf + GPU do the fine
      * frequency stepping. The prime can't be frequency-scaled below the vendor floor (~3.28 GHz) mid-game,
-     * so offlining is the *only* way to cut its power — park it when AutoTDP has harvested its cap to the
+     * so offlining is the *only* way to cut its power, park it when AutoTDP has harvested its cap to the
      * floor, fps is holding the target, the prime cores themselves are idle, and it's cool/steady. This is
      * NOT gated on battery: AutoTDP means efficiency regardless of power source (parking also sheds heat).
      * Re-online the moment anything goes wrong; a cooldown after a park that hurt fps prevents flapping.
      */
     /**
      * The rendering-stopped safety block, shared by [step]'s not-rendering early return and the screen-off
-     * pause ([pauseForScreenOff]). Safety: never hold the prime cores offline while nothing is rendering —
+     * pause ([pauseForScreenOff]). Safety: never hold the prime cores offline while nothing is rendering,
      * a prime parked just before rendering stopped (an in-emulator game switch, a load screen, a pause,
-     * the display turning off) would otherwise stay offlined until the foreground PACKAGE changed — which
-     * never happens inside a multi-game emulator — stranding controller/input threads on the dead cores.
+     * the display turning off) would otherwise stay offlined until the foreground PACKAGE changed, which
+     * never happens inside a multi-game emulator, stranding controller/input threads on the dead cores.
      * Re-onlining is always the safe direction (parking re-arms once continuous rendering resumes).
      * [sustained] additionally re-arms the settle gate + drops the per-session park penalties so the next
      * render session re-learns its park decision from scratch.
@@ -373,7 +373,7 @@ class AutoTuneController(
 
     /**
      * Screen-off hand-off for the watcher's TOTAL-sleep gate: [step] stops being called entirely while the
-     * display is off, so run the rendering-stopped safety NOW — re-online a parked prime (never leave cores
+     * display is off, so run the rendering-stopped safety NOW, re-online a parked prime (never leave cores
      * offline unattended) and re-arm the settle gate as a sustained gap would, so wake re-decides parking
      * from scratch. Session identity and the learned power model are untouched; stepping resumes on the
      * first screen-on tick.
@@ -423,7 +423,7 @@ class AutoTuneController(
         // Never park a prime whose own cores are still busy (cpuPeakPct = prime-cluster peak; unknown ⇒ allow).
         val primeNotPegged = cpuPeakPct < 0 || cpuPeakPct < PARK_CPU_PEAK_MAX
         // Don't park until the game has settled into continuous play (sessionSettled). During the initial
-        // load the screen renders erratically — stalls and stutters — with the prime idle, which otherwise
+        // load the screen renders erratically, stalls and stutters, with the prime idle, which otherwise
         // looks parkable and only slows the load.
         val eligible = aggressivePark && steady && targetFps > 0 && !thermal && sessionSettled &&
             bottleneck != Bottleneck.CPU && primeNotPegged &&
@@ -457,7 +457,7 @@ class AutoTuneController(
             reprobeCounter = 0
             edged.clear()
         }
-        // Re-probe content-capped domains far less often than trim edges — clearing this every trim cycle
+        // Re-probe content-capped domains far less often than trim edges, clearing this every trim cycle
         // would re-probe a video every few seconds and waste power. Content does change though (a clip ends,
         // a cutscene starts), so re-test roughly once a minute.
         if (++raiseStallCounter >= RAISE_STALL_REPROBE_TICKS) {
@@ -479,22 +479,22 @@ class AutoTuneController(
         }
         if (harvestCooldown > 0) harvestCooldown--
         if (powerCooldown > 0) powerCooldown--
-        // Prime-WALLED LATCH: track whether the fps target is structurally unreachable — below target, a single
+        // Prime-WALLED LATCH: track whether the fps target is structurally unreachable, below target, a single
         // core PEGGED (the vendor-floored prime gating each frame), and the GPU has headroom (so it's not GPU-
         // bound: raising the GPU wouldn't help). Key off the RAW pegged-core + GPU-headroom signals, NOT the
         // aggregate bottleneck label (it flickers CPU/GPU/NONE on this noisy signal and never let the latch
         // build). Engage after [PRIME_BOUND_CONFIRM] such ticks; RELEASE only after [PRIME_BOUND_RELEASE] ticks
-        // of genuinely reaching the FULL target (a lone 58-fps near-miss must NOT release it — that flutter was
+        // of genuinely reaching the FULL target (a lone 58-fps near-miss must NOT release it, that flutter was
         // the bug). Once latched the settle below outranks the recovery lockout, which otherwise fires forever on
         // a chronically-rough prime-walled game (jankEma ≫ LOCK_JANK) and pumps heat raising clocks that can't
         // lift a prime-gated frame.
         val reachedTarget = targetFps <= 0 || fps >= targetFps
         val below = targetFps > 0 && fps < targetFps * TARGET_HYST_LO
-        // Gated to Odin power tuning: the SD 8 Gen 2's prime SCALES, so it must keep chasing (raising) — never
+        // Gated to Odin power tuning: the SD 8 Gen 2's prime SCALES, so it must keep chasing (raising), never
         // settle. With the flag off, primeWalled is always false ⇒ the latch never engages and both settle
         // short-circuits below are skipped.
         // The core must be TRULY PEGGED (>= CPU_CORE_WALL ~90), not merely busy: a light game (Megabonk) whose
-        // hottest core sits at 66–81 % is NOT prime-gated — raising its clocks DOES lift fps — so it must keep
+        // hottest core sits at 66–81 % is NOT prime-gated, raising its clocks DOES lift fps, so it must keep
         // chasing/holding 60. Only a near-pegged core (Stray's vendor-floored Box64 thread, 95–100) is the real
         // wall the settle exists for. CPU_CORE_BOUND (65) is the bottleneck-detection bar; the settle needs the
         // stricter "actually maxed" bar or it strangles a cool 5 W / 44 °C mid-range game into GPU oscillation.
@@ -510,8 +510,8 @@ class AutoTuneController(
                 primeBoundLatched = false
                 primeBoundStreak = 0
             }
-        } // else: below target but GPU-bound / flicker — preserve both streaks
-        // Absolute thermal trip (last resort): shed heat ANY way, including the maybe-no-op prime — ignoring
+        } // else: below target but GPU-bound / flicker, preserve both streaks
+        // Absolute thermal trip (last resort): shed heat ANY way, including the maybe-no-op prime, ignoring
         // edges AND learned floors (a floor pinned while chasing must not block the safety trim).
         if ((cpuTempC ?: 0) >= HARD_THERMAL_C || (gpuTempC ?: 0) >= HARD_THERMAL_C) {
             lastTrimPolicy = null
@@ -528,17 +528,17 @@ class AutoTuneController(
         }
         // Bias POWER ceiling (the PRIMARY lever for the Odin's tiny chassis ~13–14 W envelope): cap the CAUSE
         // of heat (watts) ahead of the lagging temp. Hold draw under the envelope by trimming perf+GPU (skip
-        // the prime — its draw can't be capped). Acts on the SMOOTHED draw so a single-tick spike doesn't trim;
-        // stands down while charging (drawWEma -1) — the thermal ceiling above is the backstop then.
+        // the prime, its draw can't be capped). Acts on the SMOOTHED draw so a single-tick spike doesn't trim;
+        // stands down while charging (drawWEma -1), the thermal ceiling above is the backstop then.
         val powerCeilingW = gateParams().powerCeilingW
         if (wattCapAndSettleEnabled && drawWEma > 0f && drawWEma > powerCeilingW) {
             powerCooldown = POWER_COOLDOWN_TICKS // hold off chase-raises for a few ticks so we don't bounce back over
             lastTrimPolicy = null
             return if (thermalTrim(policies) != null) Action.TRIM else Action.HOLD
         }
-        // LATCHED prime-walled settle — placed ABOVE the recover/lockout/raise machinery on purpose. On a
+        // LATCHED prime-walled settle, placed ABOVE the recover/lockout/raise machinery on purpose. On a
         // chronically-rough prime-walled game the recovery lockout (jankEma ≫ LOCK_JANK) would fire EVERY tick
-        // and pump heat raising clocks that can't lift a prime-gated frame — the raise→heat→thermal-trim→cool→
+        // and pump heat raising clocks that can't lift a prime-gated frame, the raise→heat→thermal-trim→cool→
         // raise oscillation. When we've confirmed the wall AND the GPU isn't currently the bottleneck, just hold
         // (harvest the idle GPU) and let the thermal/power ceilings above shed heat. If the GPU IS saturated this
         // tick (a GPU-heavy moment), fall through so the normal logic can raise the real bottleneck.
@@ -561,15 +561,15 @@ class AutoTuneController(
             return if (raiseAll(policies)) Action.RAISE else Action.HOLD
         }
         val lo = targetFps * TARGET_HYST_LO
-        // Recovery lockout — the jank rail made *sustained*. One bad trim is caught by the single-undo rails
+        // Recovery lockout, the jank rail made *sustained*. One bad trim is caught by the single-undo rails
         // just below; a dip or roughness that persists for ≥ LOCK_ENTER_TICKS is a real stutter (we harvested
         // too far, or the scene got heavier). Then: stop harvesting, snap the caps up to the last smooth point
-        // in one move ([enterLockout]), and raise the limiter — the saturated GPU first, the exact case a
-        // hot-thread bn=CPU used to mis-serve by feeding the CPU while the GPU sat starved — until frames hold
+        // in one move ([enterLockout]), and raise the limiter, the saturated GPU first, the exact case a
+        // hot-thread bn=CPU used to mis-serve by feeding the CPU while the GPU sat starved, until frames hold
         // for LOCK_RECOVER_TICKS. On release, pin the raised domains' floors and suppress harvesting for a
         // cooldown so the loop can't immediately dig back into the same stutter.
         // A real stutter shows up as frame-pacing *roughness* (uneven frame times), not merely a low rate.
-        // Steady low-fps content — a 24 fps video under a 30 target — paces evenly (jank≈0), so it stays on
+        // Steady low-fps content, a 24 fps video under a 30 target, paces evenly (jank≈0), so it stays on
         // the harvest path and isn't mistaken for a clock-starved game. Triggering on fps-below-target alone
         // would conflate the two and pin clocks chasing an unreachable rate.
         val rough = jank >= LOCK_JANK
@@ -607,7 +607,7 @@ class AutoTuneController(
             return Action.RAISE
         }
         // At/above target (overshooting, or holding under the Game-Mode cap): harvest the slack. Hill-climb
-        // — trim the next non-bottleneck domain a notch; the rails above back it off if it costs frames.
+        //, trim the next non-bottleneck domain a notch; the rails above back it off if it costs frames.
         if (steady && fps >= lo) {
             // Remember this smooth, in-band point so a later stutter can snap straight back to it.
             if (jank < LOCK_JANK) {
@@ -616,7 +616,7 @@ class AutoTuneController(
             }
             pendingRaise = null // climbed back into the band; any pending clock-probe is resolved
             // Frametime-margin early-warning: the AVERAGE rate still holds the target, but the worst-frame
-            // TAIL is creeping toward the frame budget — a scene-transition is starting to miss before the
+            // TAIL is creeping toward the frame budget, a scene-transition is starting to miss before the
             // average collapses (and before jank accumulates enough to trip the recovery lockout). When a real
             // clock domain is saturated, PRE-RAISE it (predictive recovery; the lockout stays the backstop);
             // when nothing is saturated, raising can't help (emulator/IO overhead) so just stop harvesting.
@@ -642,7 +642,7 @@ class AutoTuneController(
                 }
             }
         }
-        // Below the target. Don't assume low fps means "needs more clock" — *probe* and watch the response.
+        // Below the target. Don't assume low fps means "needs more clock", *probe* and watch the response.
         if (fps < lo) {
             // Resolve the last clock-probe: did raising that domain actually move fps?
             val probe = pendingRaise
@@ -651,7 +651,7 @@ class AutoTuneController(
                 pendingRaise = null
                 val needed = maxOf(RAISE_RESPONSE_FPS, fpsBeforeRaise * RAISE_RESPONSE_FRAC)
                 if (fps <= fpsBeforeRaise + needed) {
-                    // No response THIS probe — hand back the clock that did nothing (as before). But don't
+                    // No response THIS probe, hand back the clock that did nothing (as before). But don't
                     // *latch* "content-capped" on a single bad probe: in a high-fps-variance game a wave can
                     // land on the probe and mask a real gain, which used to harvest into a stutter and stay
                     // stuck. Require the no-response SUSTAINED; any probe that moves fps resets the streak. A
@@ -666,7 +666,7 @@ class AutoTuneController(
                     }
                     return Action.TRIM
                 } else {
-                    raiseStallStreak.remove(probe) // it moved fps — reset; climb another notch below.
+                    raiseStallStreak.remove(probe) // it moved fps, reset; climb another notch below.
                     probeHelped = true
                 }
             }
@@ -678,19 +678,19 @@ class AutoTuneController(
             // bottleneck line ⇒ each has idle headroom ⇒ none is clock-starved), no probe just moved fps, and
             // the SoC is warm (≥ THERMAL_SOFT_C, just under the hard 85 °C trip). Raising a non-bottleneck to
             // full clock can't lift the rate (the limit is emulator overhead / a frame cap) and only adds
-            // heat, which throttles fps *further* — the field log's CPU pinned at 3.5 GHz / 90 °C while only
+            // heat, which throttles fps *further*, the field log's CPU pinned at 3.5 GHz / 90 °C while only
             // 42 % busy, fps stuck ~50. Harvest toward the floor to shed heat at no fps cost. (Cool-and-not-
             // bound is left to the probe/content-cap path below, which still climbs when raising DOES help.)
             val hot = (cpuTempC ?: 0) >= THERMAL_SOFT_C || (gpuTempC ?: 0) >= THERMAL_SOFT_C
             if (!probeHelped && hot && (cpuBusyPct >= 0 || gpuBusyPct >= 0)) {
                 // Thermally bound below target: the last clock-probe didn't move fps and the SoC is warm.
-                // Raising further just hits the 85 °C wall and throttles — or, on a maxed Box64 single thread /
-                // vendor-floored prime, does nothing — which is Stray's 18 W / 91 °C chase. STOP pumping: harvest
-                // the NON-bottleneck toward its hard floor (ignoreFloor — past any floor pinned while chasing) to
-                // shed heat, and return here so we never reach the raise below — that's what breaks the pump cycle
+                // Raising further just hits the 85 °C wall and throttles, or, on a maxed Box64 single thread /
+                // vendor-floored prime, does nothing, which is Stray's 18 W / 91 °C chase. STOP pumping: harvest
+                // the NON-bottleneck toward its hard floor (ignoreFloor, past any floor pinned while chasing) to
+                // shed heat, and return here so we never reach the raise below, that's what breaks the pump cycle
                 // while the SoC stays warm (no need to stall, which would unprotect the bottleneck). The pegged
                 // CPU is left alone; the hard 85 °C guard trims it if heat keeps climbing. (This previously
-                // required NO bottleneck, so a maxed-CPU emulated game — exactly Stray — was never caught.)
+                // required NO bottleneck, so a maxed-CPU emulated game, exactly Stray, was never caught.)
                 pendingRaise = null
                 if (steady && harvestCooldown == 0) {
                     val trimmed = trimNext(policies, ignoreEdges = false, ignoreFloor = true)
@@ -703,8 +703,8 @@ class AutoTuneController(
                 }
                 return Action.HOLD
             }
-            // Don't raise INTO the power ceiling: within [POWER_RAISE_FRAC] of the watt envelope — OR during the
-            // [powerCooldown] right after the cap fired — more clock just overheats for frames the chassis can't
+            // Don't raise INTO the power ceiling: within [POWER_RAISE_FRAC] of the watt envelope, OR during the
+            // [powerCooldown] right after the cap fired, more clock just overheats for frames the chassis can't
             // sustain (the power rail above would trim it right back ⇒ oscillation). Hold at the budget. The
             // cooldown is the sticky part: it suppresses the chase even once the smoothed draw dips back under,
             // which is what stops the raise→spike→trim bounce. Safety raises (stutter recovery) above aren't gated.
@@ -725,7 +725,7 @@ class AutoTuneController(
             // still below target ⇒ content-/externally-capped, not clock-starved. Mark every domain
             // content-capped so the harvest can trim even a high-load one (e.g. a video-compositing GPU that
             // reads as the "bottleneck"), then harvest toward the floor. A trim that really costs frames hits
-            // the fps-regret rail above and is undone — so a genuinely maxed-but-too-heavy game stays pinned.
+            // the fps-regret rail above and is undone, so a genuinely maxed-but-too-heavy game stays pinned.
             if (steady && harvestCooldown == 0) {
                 policies.forEach { raiseStalled.add(it.id) }
                 val trimmed = trimNext(policies, ignoreEdges = false)
@@ -743,7 +743,7 @@ class AutoTuneController(
 
     /**
      * Prime-bound settle: the target is unreachable because a single core (the vendor-floored prime) gates each
-     * frame. Never raise into that wall; harvest the idle GPU toward saturation (no fps cost — fps is CPU-gated)
+     * frame. Never raise into that wall; harvest the idle GPU toward saturation (no fps cost, fps is CPU-gated)
      * so it sheds watts/heat. Stops trimming once the GPU nears saturation ([GPU_SETTLE_BUSY]) so it never digs
      * into a stutter. The over-raised CPU clusters are brought down by the power ceiling, not here (trimming the
      * bn=CPU clusters directly is bottleneck-protected); this just stops the chase and harvests the wasted GPU.
@@ -766,17 +766,17 @@ class AutoTuneController(
 
     /**
      * Trim the first still-trimmable policy in prime→efficiency→GPU order, **skipping the bottleneck
-     * domain** (its load-gated floor is its current cap — don't starve the limiter). [ignoreEdges] (used
+     * domain** (its load-gated floor is its current cap, don't starve the limiter). [ignoreEdges] (used
      * by the thermal guard) also ignores the bottleneck skip, since shedding heat outranks it. A domain
-     * that's been *proven* content-capped ([raiseStalled] — raising it didn't move fps) is no longer
+     * that's been *proven* content-capped ([raiseStalled], raising it didn't move fps) is no longer
      * protected as a bottleneck: that's how a high-load-but-clock-insensitive GPU (video compositing) still
      * gets harvested. If trimming it really does cost frames, the fps-regret rail undoes and freezes it.
      *
      * NB: trim order is intentionally prime→perf→GPU, not watt-ranked. Two proven behaviors depend on it:
-     * the prime must reach its floor FAST so it can *park* (its only real power lever — frequency-capping it
+     * the prime must reach its floor FAST so it can *park* (its only real power lever, frequency-capping it
      * is futile mid-game), and the GPU stays *last* as an fps-safety hedge (it's the common bottleneck). A
      * pure watt-rank trims the GPU first (one big domain) and starves both. The learned CPU/GPU split is
-     * used where it's safe — the battery/EST-PK estimate — not to reorder live trims.
+     * used where it's safe, the battery/EST-PK estimate, not to reorder live trims.
      */
     private fun trimNext(
         policies: List<CpuPolicyInfo>,
@@ -787,7 +787,7 @@ class AutoTuneController(
             val protectedBottleneck = isBottleneck(p) && p.id !in raiseStalled
             if (!ignoreEdges && (p.id in edged || protectedBottleneck)) continue
             val cur = capPercent[p.id] ?: 100
-            // [ignoreFloor] drops to the HARD min, bypassing the learned [domainFloor] — used when shedding
+            // [ignoreFloor] drops to the HARD min, bypassing the learned [domainFloor], used when shedding
             // heat outranks the learned knee (the thermal guard / thermal-bound harvest). Otherwise the floors
             // pinned while chasing an unreachable target would block the safety trim (the Stray 91°C runaway).
             val min = if (ignoreFloor) minFor(p) else effectiveMin(p)
@@ -836,7 +836,7 @@ class AutoTuneController(
 
     /**
      * Undo a hurtful trim of [id] (freeze + raise a notch) AND pin its **learned floor** at the recovered
-     * level, so future trims/reprobes won't take it back below its knee — this is what stops the perf
+     * level, so future trims/reprobes won't take it back below its knee, this is what stops the perf
      * cluster bouncing to CPU_MIN every reprobe on a game that needs the clock in its heavy moments.
      */
     private fun raiseAndLearnFloor(policies: List<CpuPolicyInfo>, id: Int) {
@@ -847,11 +847,11 @@ class AutoTuneController(
     }
 
     /**
-     * Climb out of a sustained stutter by raising the limiter — the **saturated GPU first** (when gpuBusy is
+     * Climb out of a sustained stutter by raising the limiter, the **saturated GPU first** (when gpuBusy is
      * pegged), exactly the case a hot-thread bn=CPU used to mis-serve by feeding the CPU while the GPU sat
      * starved; otherwise the normal bottleneck-first order. Content-cap latches are ignored here (a stutter
      * means they may be stale). Records what it raised so the floor can be pinned on recovery; returns false
-     * once everything is already maxed (a genuinely too-heavy scene — hold at full clocks until it eases).
+     * once everything is already maxed (a genuinely too-heavy scene, hold at full clocks until it eases).
      */
     private fun recoverRaise(policies: List<CpuPolicyInfo>): Boolean {
         val gpu = policies.firstOrNull { it.isGpu }
@@ -871,7 +871,7 @@ class AutoTuneController(
     /**
      * Engage the recovery lockout: **snap the caps up to the last smooth operating point** in one move
      * (undoes a multi-notch over-harvest that crept into a stutter; never snaps *down*, since a heavier
-     * scene needs more, not less — [recoverRaise] climbs from there). A stutter invalidates the harvest
+     * scene needs more, not less, [recoverRaise] climbs from there). A stutter invalidates the harvest
      * assumptions, so edges, content-cap latches and any pending probe are cleared too.
      */
     private fun enterLockout(policies: List<CpuPolicyInfo>) {
@@ -928,16 +928,16 @@ class AutoTuneController(
     )
     private fun gateParams(): GateParams = gateParamsFor(bias)
 
-    /** [gateParams] for an explicit [b] — exposed (internal, no behavior change) so unit tests can pin the
+    /** [gateParams] for an explicit [b], exposed (internal, no behavior change) so unit tests can pin the
      *  per-bias values AND the EFFICIENT→SMOOTH monotonic gradient without driving a full session. Pure: reads
      *  nothing but [b]. The live decision path always goes through [gateParams] (= `gateParamsFor(bias)`). */
     internal fun gateParamsFor(b: AutoTdpBias): GateParams = when (b) {
         // ceilingC sits ABOVE the chip's uncoolable prime floor (~80 °C on the Odin under heavy load) so the
-        // trim is REACHABLE — a ceiling below the floor (the old EFFICIENT 74) saturates: it strangles the GPU
+        // trim is REACHABLE, a ceiling below the floor (the old EFFICIENT 74) saturates: it strangles the GPU
         // to its floor forever (Stray 60→42 fps) for ~0 thermal/power gain. Above the floor the ceiling is a
         // genuine cascade backstop: the fan (target ≤ ceiling − [AUTOTDP_FAN_CASCADE_GAP_C]) takes the first
         // bite, clocks only trim when it can't hold. Band width (floor→ceiling) = the bias's noise↔fps trade.
-        // powerCeilingW (the sustained draw each mode holds) is the PRIMARY lever — see [powerCeilingW]; over
+        // powerCeilingW (the sustained draw each mode holds) is the PRIMARY lever, see [powerCeilingW]; over
         // the chassis envelope, heat outruns cooling regardless of fan. ceilingC is the thermal backstop.
         AutoTdpBias.EFFICIENT -> GateParams(alpha = 0.30f, nearFrac = 1.9f, overFrac = 2.2f, confirm = 3, ceilingC = 82, powerCeilingW = powerCeilingW(b))
         AutoTdpBias.BALANCED -> GateParams(alpha = 0.45f, nearFrac = 1.6f, overFrac = 1.9f, confirm = 2, ceilingC = 84, powerCeilingW = powerCeilingW(b))
@@ -950,9 +950,9 @@ class AutoTuneController(
 
     /**
      * Trim a REAL heat-shedding domain (perf/efficiency CPU or GPU) to hold the thermal ceiling, **skipping the
-     * prime** — its cap is a no-op on SoCs that vendor-floor it (the Odin's prime stays ~3.5 GHz however low we
+     * prime**, its cap is a no-op on SoCs that vendor-floor it (the Odin's prime stays ~3.5 GHz however low we
      * cap it), so "trimming" it sheds no heat (that left Stray riding 97 °C while the guard wasted trims on the
-     * floored prime). Drops to the hard floor (ignores learned floors) and ignores bottleneck protection — the
+     * floored prime). Drops to the hard floor (ignores learned floors) and ignores bottleneck protection, the
      * ceiling overrides the fps target on purpose.
      */
     private fun thermalTrim(policies: List<CpuPolicyInfo>): Int? {
@@ -991,17 +991,17 @@ class AutoTuneController(
 
     companion object {
         /** Cascade gap (°C): during AutoTDP the Custom fan targets [thermalCeilingC] − this, so the fan ramps
-         *  up BEFORE the clock-trim ceiling engages — it buys back GPU clocks (more fps) by spending noise on a
+         *  up BEFORE the clock-trim ceiling engages, it buys back GPU clocks (more fps) by spending noise on a
          *  hot AAA game, instead of the clocks throttling first. See [autoTdpFanTargetC]. */
         const val AUTOTDP_FAN_CASCADE_GAP_C = 2
 
         /** The fan's effective target temp while AutoTDP runs: the user's manual target, but never above the
-         *  trim ceiling minus the cascade gap — guarantees the fan takes the first bite regardless of how lazy
+         *  trim ceiling minus the cascade gap, guarantees the fan takes the first bite regardless of how lazy
          *  the user's manual fan target is, so the GPU isn't strangled while the fan sleeps. */
         fun autoTdpFanTargetC(userTargetC: Int, ceilingC: Int): Int =
             minOf(userTargetC, ceilingC - AUTOTDP_FAN_CASCADE_GAP_C)
 
-        /** The sustained power ceiling (W) each AutoTDP bias holds — the PRIMARY heat lever (the Odin's chassis
+        /** The sustained power ceiling (W) each AutoTDP bias holds, the PRIMARY heat lever (the Odin's chassis
          *  only dissipates ~13–14 W). Single source of truth: the controller's [gateParams] AND the UI read
          *  this so the mode descriptions can state the TDP cap. Odin-tuned; on-device adjustable. */
         fun powerCeilingW(bias: AutoTdpBias): Float = when (bias) {
@@ -1010,7 +1010,7 @@ class AutoTuneController(
             AutoTdpBias.SMOOTH -> 14f
         }
 
-        /** True only for the Odin (CQ8725S) — the device the watt cap + prime-walled settle are tuned for (tight
+        /** True only for the Odin (CQ8725S), the device the watt cap + prime-walled settle are tuned for (tight
          *  chassis, vendor-floored prime). The SD 8 Gen 2 (QCS8550, Thor/RP6) and any unknown SoC return false,
          *  so they get plain chase-and-harvest. The UI also uses this to hide the per-mode watt labels there.
          *  Delegates to the [com.kei.pulse.model.DeviceProfiles] invariants table. */
@@ -1037,9 +1037,9 @@ class AutoTuneController(
         // under this (leaves headroom below the 85 saturation line so the trim never makes the GPU the limiter)
         private const val CPU_CORE_BOUND = 65 // a single core this busy can be the limiter (hot game thread)
         // The prime-WALLED settle needs a STRICTER bar than CPU_CORE_BOUND: only a near-pegged core (the vendor-
-        // floored prime / a maxed Box64 thread — Stray reads 95–100) is a true wall where chasing 60 is futile.
+        // floored prime / a maxed Box64 thread, Stray reads 95–100) is a true wall where chasing 60 is futile.
         // A merely-busy core (Megabonk 66–81) still lifts fps when given clock, so it must NOT settle (that mis-
-        // fire harvested the GPU and oscillated a cool 5 W / 44 °C game — the "AutoTDP got worse" regression).
+        // fire harvested the GPU and oscillated a cool 5 W / 44 °C game, the "AutoTDP got worse" regression).
         private const val CPU_CORE_WALL = 90 // a core must be ~pegged to count as the unreachable prime wall
         private const val CPU_CORE_GAP = 30 // …but only if it's this far above the aggregate (one hot thread,
         // not balanced multi-core load the aggregate already covers)
@@ -1059,13 +1059,13 @@ class AutoTuneController(
         private const val LOCK_COOLDOWN_TICKS = 4 // harvesting stays suppressed this many ticks after recovery
         // Frametime-margin early-warning gate, scaled by the efficiency↔smoothness bias. Acts on the tail EMA
         // (× frame budget), not the raw worst frame, so isolated emulator jitter doesn't trip it. Tuned
-        // starting values — on-device adjustable like the fan gains:
+        // starting values, on-device adjustable like the fan gains:
         //  - EFFICIENT: smooth the tail hard (low alpha) + high thresholds + long confirm → ignore jitter,
         //    keep harvesting; only a sustained rough tail acts.
         //  - SMOOTH: react fast (high alpha) + low thresholds → protect frames aggressively (≈ the prior gate).
         //  - BALANCED: between. All stay below the 33 ms hard-jank line so we act BEFORE the lockout would.
         private const val THERMAL_C = 85 // park-unpark thermal threshold (handlePrimeParking)
-        private const val HARD_THERMAL_C = 90 // absolute trip — trim anything (incl the floored prime); above any bias ceiling
+        private const val HARD_THERMAL_C = 90 // absolute trip, trim anything (incl the floored prime); above any bias ceiling
         private const val THERMAL_SOFT_C = 80 // warm (below the hard 85 trip): stop raising a non-bottleneck
         // domain to pre-empt the throttle, instead of pumping heat in chasing an fps the clocks can't reach
         private const val REPROBE_TICKS = 8 // re-test trimming roughly every ~16s (step runs ~2s)
@@ -1083,12 +1083,12 @@ class AutoTuneController(
 
         /**
          * Apply [caps] (policy id → percent) via [PerformanceCommandBuilder] so the writes are locked
-         * read-only — the only way they survive the vendor perf daemon (CPU `scaling_max_freq` + GPU
+         * read-only, the only way they survive the vendor perf daemon (CPU `scaling_max_freq` + GPU
          * `min_pwrlevel`/`max_pwrlevel`). Percent is turned into a real OPP per policy first.
          *
          * Only the **prime** cluster's `scaling_min` is lowered (see [primePolicyId]). The vendor floors the
          * prime's min ~3 GHz during gaming, so without this the prime cap is rejected (max < min) and it
-         * never drops — this is what the old "working" build did for the prime. The *perf* cluster's min is
+         * never drops, this is what the old "working" build did for the prime. The *perf* cluster's min is
          * deliberately left alone: writing it wakes the HAL and stomps the perf cap back up (the regression
          * we fixed). Net: prime drops AND perf keeps biting.
          */
@@ -1106,7 +1106,7 @@ class AutoTuneController(
 
         /**
          * Re-assert an explicit, already-resolved locked cap (policy id → kHz; a GPU value is a kHz the builder
-         * maps to a pwrlevel) — used to HOLD a per-app Custom/tier binding's caps against the vendor daemon, the
+         * maps to a pwrlevel), used to HOLD a per-app Custom/tier binding's caps against the vendor daemon, the
          * same lock + prime-only `scaling_min` lower as [applyCapsToDevice]. [policies] MUST be the full detected
          * set so the prime is identified correctly; only ids present in [freqs] are written, so an uncapped
          * cluster (incl. an uncapped prime, whose min we then never touch) is left completely alone.
@@ -1125,7 +1125,7 @@ class AutoTuneController(
 
         /**
          * Re-assert the NON-PRIME CPU clusters' caps (`scaling_max`, 444-locked) WITHOUT lowering their
-         * `scaling_min` (writing a perf cluster's min wakes the HAL and stomps its max — the brief's #1 rule)
+         * `scaling_min` (writing a perf cluster's min wakes the HAL and stomps its max, the brief's #1 rule)
          * and WITHOUT touching the prime. Called every tick so the perf cap holds even while the prime is
          * PARKED: the per-tick prime re-assert is skipped when parked, and the vendor then stomps perf's
          * `scaling_max` back to full → the CPU runs free → heat → loud fan. Only writes clusters capped < 100%.

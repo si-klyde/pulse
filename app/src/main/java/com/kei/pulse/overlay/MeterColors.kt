@@ -2,7 +2,7 @@ package com.kei.pulse.overlay
 
 import androidx.compose.ui.graphics.Color
 
-// Semantic meter ramp for temps/load — cool → warm → hot, independent of the theme accent. Shared by the
+// Semantic meter ramp for temps/load, cool → warm → hot, independent of the theme accent. Shared by the
 // OSD (OverlayContent) and the Quick Access bar (QaControls/Panel) so the two overlays read as one product.
 internal val MeterCool = Color(0xFF7FB59A)
 internal val MeterWarm = Color(0xFFD9A441)

@@ -18,7 +18,7 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 /**
  * The minimal owner set Compose needs to run inside a WindowManager-added view: Lifecycle,
  * ViewModelStore, and SavedState owners attached to the view tree. Create one per show(),
- * call [onResumed] after the view is added, and [onDestroyed] on hide (then discard — a
+ * call [onResumed] after the view is added, and [onDestroyed] on hide (then discard, a
  * destroyed lifecycle can't be reused).
  */
 class OverlayViewHost(context: Context) : LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {

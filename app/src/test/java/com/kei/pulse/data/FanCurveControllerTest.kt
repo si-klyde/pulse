@@ -10,7 +10,7 @@ import org.junit.Test
 /**
  * The Custom fan engine drives the fan as a CONTINUOUS slew, not a stepped jump: the slow telemetry tick
  * sets a target ([setTarget]); a fast loop eases the applied % toward it by a small amount each pass and
- * WRITES the duty every pass ([slew]) — that write is also the re-assert that beats the vendor fan service.
+ * WRITES the duty every pass ([slew]), that write is also the re-assert that beats the vendor fan service.
  * Asserts the ramp is gradual (so the fan doesn't audibly step), the 90°C override snaps to full for safety,
  * the floor holds, and a higher slew rate ramps faster. Live writes are verified on-device.
  */
@@ -120,7 +120,7 @@ class FanCurveControllerTest {
     }
 
     @Test fun `does not re-assert when the live node still matches what we wrote`() {
-        // RP6/Thor leave the duty alone — reconcile with the matching value must NOT force a needless write
+        // RP6/Thor leave the duty alone, reconcile with the matching value must NOT force a needless write
         // (a blind re-write every tick is exactly the 20%<->vendor oscillation we must avoid).
         val w = mutableListOf<Int>()
         val c = controller(w)

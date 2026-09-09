@@ -8,9 +8,9 @@ import com.kei.pulse.root.shellQuote
 /**
  * RGB joystick-LED control for AYN / Retroid handhelds.
  *
- * The stock settings apps (`com.rp.settings` on the RP6, `com.odin.settings` on the Odin 3 — they share the
+ * The stock settings apps (`com.rp.settings` on the RP6, `com.odin.settings` on the Odin 3, they share the
  * vendor `com.ro.*` codebase) expose the joystick LEDs through **`Settings.System` keys** that a framework
- * service applies to the LED hardware — the **same pattern as the fan** (we set the vendor's own value and its
+ * service applies to the LED hardware, the **same pattern as the fan** (we set the vendor's own value and its
  * service drives the hardware; we never poke raw sysfs). **Confirmed identical on both the Retroid Pocket 6 and
  * the AYN Odin 3** (`settings list system`):
  *
@@ -23,14 +23,14 @@ import com.kei.pulse.root.shellQuote
  * is unverified.
  *
  * **Self-gated by [available]** (the color key existing), so it is automatically inert on any device that does
- * NOT expose the vendor joystick key — no per-SoC list needed; the gate opens itself wherever the key is present.
+ * NOT expose the vendor joystick key, no per-SoC list needed; the gate opens itself wherever the key is present.
  *
- * **Color-only by design:** PULSE writes ONLY `joystick_led_light_picker_color`, never `joystick_light_enabled` —
+ * **Color-only by design:** PULSE writes ONLY `joystick_led_light_picker_color`, never `joystick_light_enabled`,
  * so enabling a mode does not flip the system's own RGB on/off toggle (the top-menu tile). The user controls
  * on/off; PULSE just recolors the lights while they're on. On first use it captures the user's color so [off]
  * restores it. (Use a *solid* system effect, not an animated one, or the animation will override the color.)
  *
- * Phase 1: manual color + the two "info LED" mappings — [batteryColor] (Game-Boy-Color style green→red as it
+ * Phase 1: manual color + the two "info LED" mappings, [batteryColor] (Game-Boy-Color style green→red as it
  * drains) and [heatColor] (blue→orange→dark-red as it heats). Reactive-audio is a later phase.
  */
 class RgbController(context: Context? = null) {
@@ -48,12 +48,12 @@ class RgbController(context: Context? = null) {
     @Volatile private var lastWritten: String? = null
     @Volatile private var lastWriteMs: Long = 0L
 
-    /** True only on hardware that exposes the vendor joystick-LED key — false (and inert) elsewhere. */
+    /** True only on hardware that exposes the vendor joystick-LED key, false (and inert) elsewhere. */
     fun available(): Boolean {
         availableCached?.let { return it }
         val v = RootSupport.runRootCommand("settings get system $KEY_COLOR")?.trim()
         if (v.isNullOrEmpty()) {
-            // Root/PServer not ready yet (binder race at service start). DON'T latch a false here — that would
+            // Root/PServer not ready yet (binder race at service start). DON'T latch a false here, that would
             // leave RGB dead for the whole service life on a device that supports it. Re-probe on the next call.
             return false
         }
@@ -75,7 +75,7 @@ class RgbController(context: Context? = null) {
             savedBrightness = prefs.getString(PREF_ORIG_BRIGHT, null)
             return
         }
-        // Genuine pre-PULSE state (first use, or the user changed it while PULSE was off) — THIS is the original.
+        // Genuine pre-PULSE state (first use, or the user changed it while PULSE was off), THIS is the original.
         savedColor = current?.takeIf(::isColorPair)
         savedBrightness = RootSupport.runRootCommand("settings get system $KEY_BRIGHTNESS")?.trim()?.takeIf(::isBrightness)
         prefs?.edit()
@@ -97,7 +97,7 @@ class RgbController(context: Context? = null) {
         brightnessLevel = level
     }
 
-    /** Set BOTH joystick LEDs to (r,g,b) 0..255 — used by the automatic Battery/Heat modes (dim info-LED). */
+    /** Set BOTH joystick LEDs to (r,g,b) 0..255, used by the automatic Battery/Heat modes (dim info-LED). */
     fun setColor(r: Int, g: Int, b: Int) {
         if (!available()) return
         applyBrightness(AUTO_BRIGHTNESS)
@@ -107,7 +107,7 @@ class RgbController(context: Context? = null) {
 
     /**
      * Manual full control: each stick its own color (ARGB at full value) and brightness (0..1, baked in here).
-     * Brightness scales the RGB linearly — equivalent to HSV value, since the hardware brightness is set to max.
+     * Brightness scales the RGB linearly, equivalent to HSV value, since the hardware brightness is set to max.
      */
     fun setManual(leftColor: Int, leftBrightness: Float, rightColor: Int, rightBrightness: Float) {
         if (!available()) return
@@ -135,13 +135,13 @@ class RgbController(context: Context? = null) {
         // If THIS process never captured (PULSE wrote the LED then died before [off]), pull the persisted true
         // original so we still hand the LEDs back instead of stranding them on PULSE's color.
         if (!captured) {
-            if (prefs?.getBoolean(PREF_DONE, false) != true) return // never captured anywhere — nothing to restore
+            if (prefs?.getBoolean(PREF_DONE, false) != true) return // never captured anywhere, nothing to restore
             captured = true
             savedColor = prefs.getString(PREF_ORIG_COLOR, null)
             savedBrightness = prefs.getString(PREF_ORIG_BRIGHT, null)
         }
         // These values came from `settings get` (any WRITE_SETTINGS app can plant them) or from prefs, and they
-        // are echoed into a ROOT shell — so whitelist the shape and quote, never interpolate raw.
+        // are echoed into a ROOT shell, so whitelist the shape and quote, never interpolate raw.
         val cmds = buildList {
             savedColor?.takeIf(::isColorPair)?.let { add("settings put system $KEY_COLOR ${shellQuote(it)}") }
             savedBrightness?.takeIf(::isBrightness)?.let { add("settings put system $KEY_BRIGHTNESS ${shellQuote(it)}") }
@@ -157,7 +157,7 @@ class RgbController(context: Context? = null) {
         private const val KEY_COLOR = "joystick_led_light_picker_color"
         private const val KEY_BRIGHTNESS = "led_light_brightness_percent"
 
-        // Persisted original-color capture (survives process death — see [captureOriginal]/[off]).
+        // Persisted original-color capture (survives process death, see [captureOriginal]/[off]).
         private const val PREFS_NAME = "pulse_rgb"
         private const val PREF_DONE = "orig_captured"
         private const val PREF_ORIG_COLOR = "orig_color"
@@ -173,7 +173,7 @@ class RgbController(context: Context? = null) {
         /** Re-assert an unchanged color at least this often, to recover from the stock effect overriding us. */
         private const val REASSERT_MS = 8_000L
 
-        /** Battery/Heat info-LED hardware brightness — a subtle glow, not a beacon. */
+        /** Battery/Heat info-LED hardware brightness, a subtle glow, not a beacon. */
         private const val AUTO_BRIGHTNESS = 0.2f
 
         /** Scale an ARGB color's RGB channels by [brightness] (0..1) and format as the vendor `#ffRRGGBB`. */
@@ -185,7 +185,7 @@ class RgbController(context: Context? = null) {
             return "#ff%02x%02x%02x".format(r, g, bl)
         }
 
-        // Info-LED temperature stops (°C) — tuned for a handheld: cool idle ~35, warm ~55, hot ~75.
+        // Info-LED temperature stops (°C), tuned for a handheld: cool idle ~35, warm ~55, hot ~75.
         private const val COOL_C = 35
         private const val WARM_C = 55
         private const val HOT_C = 75

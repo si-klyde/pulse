@@ -6,7 +6,7 @@ import org.junit.Test
 
 /**
  * The AutoTDP global-default engagement policy: engage any non-neutral foreground EXCEPT a known benchmark
- * (tuning mid-benchmark trims clocks/governor and tanks the score — the device is what's being measured).
+ * (tuning mid-benchmark trims clocks/governor and tanks the score, the device is what's being measured).
  */
 class AutoTdpEngagementTest {
 

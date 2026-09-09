@@ -82,7 +82,7 @@ class InputComboParserTest {
     fun `chordPressedInWindow re-arms every window so a missed UP cannot wedge it`() {
         // The old cross-window held-set bug: a release whose UP fell in the lock-release gap stayed "held", so
         // the next press never re-triggered. Per-window detection carries no state, so an identical press in a
-        // later window fires again — even though no UP was ever observed between them.
+        // later window fires again, even though no UP was ever observed between them.
         val combo = setOf("BTN_THUMBL", "BTN_THUMBR")
         val press = listOf(down("BTN_THUMBL"), down("BTN_THUMBR"))
         assertTrue(InputComboParser.chordPressedInWindow(press, combo))
@@ -92,7 +92,7 @@ class InputComboParserTest {
     @Test
     fun `chordPressedInWindow allows extras and fires mid-window even before a release`() {
         val combo = setOf("BTN_THUMBL", "BTN_THUMBR")
-        // An unrelated button held, the chord completes, then one is released — all in one window.
+        // An unrelated button held, the chord completes, then one is released, all in one window.
         val window = listOf(down("BTN_SOUTH"), down("BTN_THUMBL"), down("BTN_THUMBR"), up("BTN_THUMBL"))
         assertTrue(InputComboParser.chordPressedInWindow(window, combo))
     }
@@ -109,7 +109,7 @@ class InputComboParserTest {
 
     // ---- Lossless capture-stream mode (parseStreamRead + advanceHeld) ----
     // The stream consumer polls a file the persistent root getevent writes, so NO edge is ever lost. That's
-    // what makes a cross-chunk held-set correct here (the windowed detector must NOT do this — its lossy
+    // what makes a cross-chunk held-set correct here (the windowed detector must NOT do this, its lossy
     // windows are exactly why chordPressedInWindow re-arms from empty).
 
     @Test

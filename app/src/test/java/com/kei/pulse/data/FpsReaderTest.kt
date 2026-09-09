@@ -14,7 +14,7 @@ class FpsReaderTest {
 
     @Test
     fun prefersGlobalPresentRate() {
-        // Display presents ~90 (AF) while the layer submits ~63 (LAF) — report the present rate.
+        // Display presents ~90 (AF) while the layer submits ~63 (LAF), report the present rate.
         val s = FpsReader.parseTimestats("FR 87 AF 90.50 WORST 16 SLOW 0 LF 87 LAF 63.00")!!
         assertEquals(90.50f, s.avgFps)
         assertEquals(87L, s.frames)
@@ -24,7 +24,7 @@ class FpsReaderTest {
 
     @Test
     fun fallsBackToLayerWhenGlobalEmpty() {
-        // No global present data (FR 0 / AF 0.00) — use the busiest layer's submit rate.
+        // No global present data (FR 0 / AF 0.00), use the busiest layer's submit rate.
         val s = FpsReader.parseTimestats("FR 0 AF 0.00 WORST 50 SLOW 3 LF 87 LAF 63.00")!!
         assertEquals(63.00f, s.avgFps)
         assertEquals(87L, s.frames)
@@ -40,7 +40,7 @@ class FpsReaderTest {
 
     @Test
     fun returnsNullWhenNothingUsable() {
-        // No global frames and no layer frames — not usable.
+        // No global frames and no layer frames, not usable.
         assertNull(FpsReader.parseTimestats("FR 0 AF 0.00 WORST 0 SLOW 0 LF 0 LAF 0.00"))
     }
 

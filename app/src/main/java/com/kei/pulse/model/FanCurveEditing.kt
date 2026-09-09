@@ -29,7 +29,7 @@ object FanCurveEditing {
     /**
      * Drag a knee when a Cooler/Quieter [bias] is shown: the graph draws the EFFECTIVE curve (base + bias),
      * so the finger position [newEffectivePercent] is in effective space. Update the BASE so base + bias lands
-     * under the finger — i.e. store `effective − bias` (clamped by [movePoint] to the safe floor..100).
+     * under the finger, i.e. store `effective − bias` (clamped by [movePoint] to the safe floor..100).
      */
     fun movePointBiased(
         points: List<FanCurvePoint>,
@@ -42,7 +42,7 @@ object FanCurveEditing {
     /**
      * Add a knee at [tempC]/[percent] (clamped to the axis + safe floor), keeping the list temperature-sorted.
      * Rejected (returns the list unchanged) if it would land within [ADD_MIN_GAP_C] of an existing knee or push
-     * past [MAX_POINTS] — so a stray tap can't cram points or explode the curve.
+     * past [MAX_POINTS], so a stray tap can't cram points or explode the curve.
      */
     fun addPoint(points: List<FanCurvePoint>, tempC: Int, percent: Int): List<FanCurvePoint> {
         if (points.size >= MAX_POINTS) return points

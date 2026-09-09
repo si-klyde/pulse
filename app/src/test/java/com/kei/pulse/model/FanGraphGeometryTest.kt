@@ -6,7 +6,7 @@ import org.junit.Test
 
 /**
  * Pure geometry/edit math behind the EVGA-style curve editor. The Compose canvas only does drawing +
- * gestures (verified on-device — can't screenshot PULSE); all the temp%↔coordinate mapping and the
+ * gestures (verified on-device, can't screenshot PULSE); all the temp%↔coordinate mapping and the
  * "drag a knee, keep it ordered and clamped" logic lives here so it's unit-tested.
  */
 class FanGraphGeometryTest {

@@ -9,7 +9,7 @@ Test device: Retroid Pocket 6 (QCS8550, Android 13).
 - 386 unit tests pass, 1 skipped (ad-hoc replay, expected).
 - CI only runs `assembleDebug`; tests are never run in CI.
 
-## Branch: `fix/root-exec-hardening` — DONE, hardware-verified
+## Branch: `fix/root-exec-hardening`: DONE, hardware-verified
 
 Scope: `app/src/main/java/com/kei/pulse/root/` (the layer that runs commands as root through the
 device's own `PServerBinder`; the app itself is still no-root).
@@ -26,11 +26,11 @@ device's own `PServerBinder`; the app itself is still no-root).
 
 ### Tests added (13)
 
-- `root/ShellQuoteTest` — quoting rules.
-- `root/RootSupportTest` — concurrent callers each run their own script (fails without the lock, verified),
+- `root/ShellQuoteTest`: quoting rules.
+- `root/RootSupportTest`: concurrent callers each run their own script (fails without the lock, verified),
   world-readable/exec perms, executor cached once, re-probed while down, `cat` quotes path.
-- `data/RgbControllerShellSafetyTest` — valid values restored quoted; hostile values never restored.
-- `data/SystemTuningShellSafetyTest` — governor quoted.
+- `data/RgbControllerShellSafetyTest`: valid values restored quoted; hostile values never restored.
+- `data/SystemTuningShellSafetyTest`: governor quoted.
 
 Result: 399 tests, 0 failures. `lintDebug` clean. Debug APK builds.
 
@@ -44,7 +44,7 @@ Result: 399 tests, 0 failures. `lintDebug` clean. Debug APK builds.
 | Reboot with Apply-on-boot + Fan + RGB, app never opened | Process up 4 s after boot, PServer acquired first try, tier caps + fan + RGB applied within 1 s |
 | Crashes | None from PULSE code |
 
-## Branch: `feat/quiet-instrument-theme` — DONE, on-device checked (RP6)
+## Branch: `feat/quiet-instrument-theme`: DONE, on-device checked (RP6)
 
 Direction chosen 2026-09-09: **quiet instrument**. Flat dark surfaces, one accent, tabular numerals,
 thin rules, no motion. Scope: theme layer only; screen layouts untouched.
@@ -65,10 +65,10 @@ Result: 399 tests, lint clean, APK builds, installed and screenshotted on RP6 (t
 - Overlay/OSD and Quick Access bar keep their own compact styling (`QaColors`, 10 sp caps labels).
 - App icon / launcher branding untouched until the name is decided.
 
-## Branch: `feat/rp6-shell` — IN PROGRESS, on-device checked (RP6)
+## Branch: `feat/rp6-shell`: IN PROGRESS, on-device checked (RP6)
 
 Design locked 2026-09-09 (canvas: https://claude.ai/code/artifact/c38dff72-c679-4408-8e7c-c58b9c2c03f4, page "RP6 design").
-Device truth: the RP6 renders at ~831×467 dp (1080p, density ≈2.3), not 960×540 — fixed columns sized to that.
+Device truth: the RP6 renders at ~831×467 dp (1080p, density ≈2.3), not 960×540, fixed columns sized to that.
 
 Done:
 - Theme: true black housing, ink at three luminances, no chromatic accent (selection = inverted fill); colour only
@@ -86,7 +86,7 @@ Also done since:
 - Session recap in the header (`SessionRecorder`, `SessionStore`, `SessionFeed`, `GameSession`): live while a game runs,
   else the last one; persisted every 30 samples; draw blanked while on external power (`PowerSource`).
 - Watcher fixes: start on app launch when anything needs it; incremental `ForegroundTracker` (6 h seed, then
-  events since last query, per-activity, same-ms de-dup) — fixes the blind spot after a low-memory kill mid-game.
+  events since last query, per-activity, same-ms de-dup), fixes the blind spot after a low-memory kill mid-game.
 - Overlays (Phase C): OSD and Quick Access on smoke surfaces; Quick Access is one column (brightness/volume,
   Power Auto|Manual|Off, Fan, Overlay, Lights), bumpers jump between groups; game name in the header.
 
@@ -123,13 +123,13 @@ Next (in order):
 
 ## Planned branches
 
-1. ~~`fix/root-exec-hardening`~~ — done.
-1b. ~~`feat/quiet-instrument-theme`~~ — done.
-1c. `feat/rp6-shell` — in progress (see above).
-2. `feat/ci-run-tests` — add `testDebugUnitTest lintDebug` to the workflow.
-3. `fix/rgb-original-capture` — issue 2 above.
-4. `perf/telemetry-direct-read` — issue 3 above (battery).
-5. `refactor/watcher-split` — issue 4 above.
+1. ~~`fix/root-exec-hardening`~~: done.
+1b. ~~`feat/quiet-instrument-theme`~~: done.
+1c. `feat/rp6-shell`: in progress (see above).
+2. `feat/ci-run-tests`: add `testDebugUnitTest lintDebug` to the workflow.
+3. `fix/rgb-original-capture`: issue 2 above.
+4. `perf/telemetry-direct-read`: issue 3 above (battery).
+5. `refactor/watcher-split`: issue 4 above.
 
 ## Dev environment
 

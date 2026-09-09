@@ -6,7 +6,7 @@ import org.junit.Test
 /**
  * The Power Target's %→frequency-map computation, extracted from TunerViewModel so the Quick Access bar's
  * live apply (in the watcher service, where a ViewModel can't be constructed) uses the IDENTICAL math as the
- * in-app slider — a divergence here would be a UI-vs-device split between the two surfaces.
+ * in-app slider, a divergence here would be a UI-vs-device split between the two surfaces.
  */
 class PowerTargetMathTest {
 
@@ -49,7 +49,7 @@ class PowerTargetMathTest {
     fun `gpu is capped like a cluster when not cpu-only`() {
         val g = gpu(900000, listOf(300000, 600000, 900000))
         // 50% of 900 MHz = 450 → nearest supported 300 or 600: 450-300=150, 600-450=150 → minByOrNull keeps
-        // the first minimum (300000) — pinned so both surfaces stay bit-identical.
+        // the first minimum (300000), pinned so both surfaces stay bit-identical.
         assertEquals(mapOf(CpuPolicyInfo.GPU_POLICY_ID to 300000), PowerTargetMath.capsForPercent(listOf(g), 50, cpuOnly = false))
     }
 

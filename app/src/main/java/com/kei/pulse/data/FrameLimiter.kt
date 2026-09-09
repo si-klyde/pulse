@@ -6,10 +6,10 @@ import com.kei.pulse.root.RootSupport
  * A real frame‑rate cap for AutoTDP targets via **Android Game Mode interventions** (`cmd game`).
  *
  * Setting a custom game mode (mode 4) with an `--fps` override caps the app's frame rate **without
- * touching the panel refresh** — so AutoTDP can hold the panel at 120 Hz (latency) yet limit a light
+ * touching the panel refresh**, so AutoTDP can hold the panel at 120 Hz (latency) yet limit a light
  * game to e.g. 60 fps, which clock‑trimming alone can't do. Confirmed working on the Odin 3 (Android 15):
  * `cmd game set --mode 4 --fps 60 <pkg>` → "fps-override: 60". On some Android 13 firmwares the
- * intervention isn't honored — calls are harmless there (best‑effort; AutoTDP's clock loop still runs).
+ * intervention isn't honored, calls are harmless there (best‑effort; AutoTDP's clock loop still runs).
  *
  * Per‑app and persistent until cleared, so AutoTDP sets it on engage and clears it on release. All shell
  * goes through [RootSupport] (PServer root).
@@ -17,7 +17,7 @@ import com.kei.pulse.root.RootSupport
 object FrameLimiter {
 
     /**
-     * Cap [pkg] to [fps] (a no‑op cap when [fps] ≤ 0 — clears instead). Returns the `cmd game` output
+     * Cap [pkg] to [fps] (a no‑op cap when [fps] ≤ 0, clears instead). Returns the `cmd game` output
      * (e.g. "fps-override: 40") so callers can confirm the firmware honored the value vs floored it.
      */
     fun setCap(pkg: String, fps: Int): String? {

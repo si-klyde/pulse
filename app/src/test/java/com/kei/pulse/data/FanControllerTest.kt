@@ -7,7 +7,7 @@ import org.junit.Test
 /**
  * The stock fan controller caches the active mode and won't re-apply the same one, so [FanController.setMode]
  * bounces through a different real mode first to force a reload. Reaching SMART must bounce through SILENT
- * (low fan), NOT SPORT (high fan) — otherwise handing the fan back to Smart (e.g. AutoTDP restoring it on
+ * (low fan), NOT SPORT (high fan), otherwise handing the fan back to Smart (e.g. AutoTDP restoring it on
  * game-exit) revs the fan for a moment. This locks that down.
  */
 class FanControllerTest {

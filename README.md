@@ -13,8 +13,8 @@
 </div>
 
 > **This is a fork.** The original **PULSE** is by [keiretrogaming](https://github.com/keiretrogaming/pulse).
-> Everything that makes this app possible — the no-root PServer technique, AutoTDP, the closed-loop fan,
-> the per-game engine — is their work and the work of the projects they built on. This fork is a
+> Everything that makes this app possible, the no-root PServer technique, AutoTDP, the closed-loop fan,
+> the per-game engine, is their work and the work of the projects they built on. This fork is a
 > redesign and a hardening pass on top of it, aimed at one device. If you have an AYN Odin 3 or Thor,
 > or you want the original's five themes and broader device tuning, use upstream. Bugs in this fork are
 > mine; report them here, not to upstream.
@@ -22,7 +22,7 @@
 ## Dedication
 
 To **keiretrogaming**, for building PULSE in the open and disclosing honestly how it was made, and to the
-chain of people before them — **AurelioB** (ClusterTune), **FeralAI** (O2P Tweaks), **TheOldTaylor**, and
+chain of people before them, **AurelioB** (ClusterTune), **FeralAI** (O2P Tweaks), **TheOldTaylor**, and
 the r/OdinHandheld community who first worked out how to drive these handhelds without rooting them.
 None of this exists without that lineage. Full credits are in [NOTICE.md](NOTICE.md), and they stay in
 every copy of this fork, as the GPL asks and as decency requires.
@@ -31,7 +31,7 @@ every copy of this fork, as the GPL asks and as decency requires.
 
 **Design.** One fixed screen built for the RP6's 5.5″ AMOLED in landscape, held by the grips, touch and
 controller alike. True black housing (off pixels cost nothing on OLED), white ink at three levels, and
-colour only where it means something — temperature, load, battery. Two typefaces: Bricolage Grotesque
+colour only where it means something, temperature, load, battery. Two typefaces: Bricolage Grotesque
 for words, Azeret Mono for every live number so digits never jitter.
 
 **Grouping.** A rail of six destinations, ordered by how often you touch them:
@@ -46,7 +46,7 @@ for words, Azeret Mono for every live number so digits never jitter.
 | **System** | Master switch, **Charging**, Quick Settings tile, startup, sleep, profiles, about. |
 
 **Session recap.** The header shows the game session that matters: live while a game runs, otherwise
-the last one — name, duration, share of frames at target, average draw, peak temperature, and the whole
+the last one, name, duration, share of frames at target, average draw, peak temperature, and the whole
 session's frame time over power draw as a trace. It survives the app being killed mid-game.
 
 **Charging.** The RP6's charging separation is driven by the vendor's Settings app, and it sometimes
@@ -56,15 +56,15 @@ needed. It never touches anything while the screen is on. The vendor's separatio
 are exposed alongside it.
 
 **Overlays.** The performance overlay and Quick Access bar sit on a smoke surface the game reads through,
-at the app's original dimensions. Quick Access is one column — brightness and volume first, then Power,
-Fan, Overlay, Lights — with the bumpers jumping between groups.
+at the app's original dimensions. Quick Access is one column, brightness and volume first, then Power,
+Fan, Overlay, Lights, with the bumpers jumping between groups.
 
 ## Fixes over upstream 1.19.6
 
 These are real bugs found while working on the fork; each has a unit test and was verified on hardware.
 
 - **Root layer.** Concurrent applies could execute each other's script (fixed-name script written outside
-  the lock). Values read back from `Settings.System` were interpolated into a root shell unquoted — any app
+  the lock). Values read back from `Settings.System` were interpolated into a root shell unquoted, any app
   with `WRITE_SETTINGS` could have run commands as root through the RGB restore path. The PServer binder
   was looked up per command and its absence latched forever at boot.
 - **Watcher blind after a restart.** Foreground detection read only the last 10 s of usage events, so after
@@ -111,7 +111,7 @@ from `ANDROID_KEYSTORE_*` environment variables or `local.properties`. Contribut
 ## How the no-root mechanism works
 
 The device ships a privileged `PServerBinder` service in its stock firmware. PULSE obtains it through
-reflection and runs short shell scripts through it as root to write protected sysfs nodes — the same
+reflection and runs short shell scripts through it as root to write protected sysfs nodes, the same
 technique ClusterTune pioneered. Every string that reaches that shell is quoted; every script is written
 and executed under one lock.
 
@@ -130,7 +130,7 @@ What that means in practice:
   the full unit suite plus lint runs on each build. CI runs the same suite on every push.
 - **Every change is validated on an actual Retroid Pocket 6.** Not an emulator, not a screenshot of a
   mockup: the app is installed on the device, the affected feature is exercised, and the result is read
-  back from the hardware — sysfs nodes, `logcat`, the vendor's own settings — before the change is
+  back from the hardware, sysfs nodes, `logcat`, the vendor's own settings, before the change is
   considered done. Where a fix claims to survive something (a low-memory kill, a reboot, a plug-in while
   asleep), that scenario was reproduced on the device. `PROGRESS.md` records what was verified and how.
 - **Limits, stated plainly.** Only the RP6 has been used for verification since the fork. Other devices
@@ -139,7 +139,7 @@ What that means in practice:
 
 ## License
 
-**GNU General Public License v2.0 or later** — see [LICENSE](LICENSE). This fork keeps the licence, the
+**GNU General Public License v2.0 or later**, see [LICENSE](LICENSE). This fork keeps the licence, the
 attribution chain in [NOTICE.md](NOTICE.md) and the record of changes in [PROGRESS.md](PROGRESS.md) and
 git history, as §2(a) requires. Source for every published build is this repository, tagged per release.
 

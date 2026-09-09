@@ -5,7 +5,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Closed-loop temperature-target fan control — the control-theory ("EVGA/EE") approach. A PI controller
+ * Closed-loop temperature-target fan control, the control-theory ("EVGA/EE") approach. A PI controller
  * drives the fan duty to hold the SoC at a target temperature: silent (min-spin) when cool, ramping exactly
  * as much as needed when hot, with anti-windup so it recovers instantly after saturation and a hard 100%
  * override at the thermal trip. Pure + unit-tested; the live driving (slew + duty write) is the service's job.
@@ -48,7 +48,7 @@ class FanTempControllerTest {
         assertTrue(controller().update(120, 78, 1.0) <= 100)
     }
 
-    @Test fun `recovers immediately after saturation — no integral windup`() {
+    @Test fun `recovers immediately after saturation, no integral windup`() {
         val c = controller()
         repeat(30) { c.update(89, 60, 1.0) } // far over target (still < trip) → pinned at 100, saturated
         // Back at target: with anti-windup the integral never wound up, so it returns straight to the floor.

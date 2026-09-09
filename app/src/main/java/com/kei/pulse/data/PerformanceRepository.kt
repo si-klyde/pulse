@@ -219,7 +219,7 @@ class PerformanceRepository(
     }
 
     /**
-     * Live GPU scaling-max readback (kHz) for the Quick Access GPU-cap stepper — one node read, so the
+     * Live GPU scaling-max readback (kHz) for the Quick Access GPU-cap stepper, one node read, so the
      * stepper's shown value is what the device actually holds. Null when policies aren't detected yet.
      */
     fun readCurrentGpuCapKhz(): Int? {
@@ -228,7 +228,7 @@ class PerformanceRepository(
     }
 
     /**
-     * Cap the GPU at [freqKhz] (snapped to a supported level) while PRESERVING the saved Custom CPU values —
+     * Cap the GPU at [freqKhz] (snapped to a supported level) while PRESERVING the saved Custom CPU values,
      * the Quick Access bar's GPU-cap stepper. A partial persistAsCustom map would REPLACE the whole saved
      * Custom map (silent CPU-values loss), so this merges: the saved Custom values (falling back to the live
      * device values when nothing is saved yet) + the new GPU entry, applied and re-persisted as the full map.
@@ -275,7 +275,7 @@ class PerformanceRepository(
     /** Friendly SoC model string for display (e.g. overlay header); null if undetected. */
     fun socModel(): String? = bundledProfileProvider.currentSocModel()
 
-    /** Applies a display profile (saved profile or Stock) by id — the tile/per-app entry point. */
+    /** Applies a display profile (saved profile or Stock) by id, the tile/per-app entry point. */
     suspend fun applyDisplayProfileById(profileId: String): Result<ApplyOutcome> {
         if (!rootCommandRunner.isAvailable) {
             return Result.failure(IllegalStateException("PServer not available"))
@@ -360,7 +360,7 @@ class PerformanceRepository(
         val filtered = selectedValues.filterKeys { policyId -> policies.any { it.id == policyId } }
         // Hold a CPU cap against the vendor perflock: lower the PRIME cluster's scaling_min (and 444-lock it)
         // BEFORE writing its max, or the daemon floors the prime's min and the kernel clamps a lower max back
-        // up — the prime cap silently won't bite (e.g. a 69% Power Target reads back at 4.2 GHz). PRIME ONLY:
+        // up, the prime cap silently won't bite (e.g. a 69% Power Target reads back at 4.2 GHz). PRIME ONLY:
         // touching the perf cluster's min wakes the HAL and stomps perf's max. On a reset (Max/Stock) hand
         // every CPU min back writable (644) to clear stale locks. Mirrors AutoTDP's apply/release path.
         val cpuPolicies = policies.filterNot { it.isGpu }
