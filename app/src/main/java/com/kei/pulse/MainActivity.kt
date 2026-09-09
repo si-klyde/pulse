@@ -24,6 +24,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.kei.pulse.appwatch.ForegroundAppMonitorService
+import com.kei.pulse.appwatch.WatcherActivation
 import com.kei.pulse.overlay.PerformanceOverlay
 import com.kei.pulse.sleep.SleepProfileMonitorService
 import com.kei.pulse.tile.QuickSettingsTileAddResult
@@ -144,12 +145,18 @@ class MainActivity : ComponentActivity() {
 
                     // Existing per-app bindings must engage on launch even if the master toggle was never
                     // flipped — the watcher self-stops if nothing needs it. (Per-app comes first.)
-                    LaunchedEffect(perAppConfigs.isNotEmpty()) {
-                        if (perAppConfigs.isNotEmpty() &&
-                            ForegroundAppMonitorService.hasUsageAccess(this@MainActivity)
-                        ) {
-                            ForegroundAppMonitorService.start(this@MainActivity)
-                        }
+                    // Same rule as the boot / package-replaced receiver: if anything needs the watcher (overlay,
+                    // quick access, AutoTDP, per-game rules, global fan/RGB), make sure it is running whenever the
+                    // app opens. A force-stop (or an install over the top) kills the service and drops the
+                    // package-replaced broadcast, so launch is the one moment left to bring it back.
+                    LaunchedEffect(settings, perAppEnabled, perAppConfigs.isNotEmpty()) {
+                        val shouldRun = settings.pulseEnabled && WatcherActivation.shouldRun(
+                            perAppEnabled = perAppEnabled,
+                            hasPerAppConfigs = perAppConfigs.isNotEmpty(),
+                            settings = settings,
+                            hasUsageAccess = ForegroundAppMonitorService.hasUsageAccess(this@MainActivity),
+                        )
+                        if (shouldRun) ForegroundAppMonitorService.start(this@MainActivity)
                     }
 
                     // System / controller back navigates out of sub-screens instead of exiting.
