@@ -51,7 +51,7 @@ fun PowerSection(
     compatible: Boolean,
     manualContent: @Composable () -> Unit,
 ) {
-    Column(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (!compatible) Note("This device does not expose the PServer service PULSE needs. Nothing here can be applied.")
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(Modifier.weight(1f, fill = false), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -68,10 +68,10 @@ fun PowerSection(
         }
 
         if (autoOn) {
-            SegRow("Frame rate to hold", height = 44) {
+            SegRow("Frame rate to hold", height = 40) {
                 fpsOptions.forEach { fps -> Seg("$fps", fpsTarget == fps, { onFpsTargetChange(fps) }, mono = true) }
             }
-            SegRow("Lean towards", height = 56) {
+            SegRow("Lean towards", height = 52) {
                 AutoTdpBias.entries.forEach { b ->
                     val cap = if (showWattCaps) " · caps ${watt(AutoTuneController.powerCeilingW(b))} W" else ""
                     OptionCard(
@@ -89,7 +89,7 @@ fun PowerSection(
             SegRow("Refresh rate", height = 40) {
                 refreshRates.forEach { hz -> Seg("$hz Hz", refreshRate == hz, { onSelectRefreshRate(hz) }) }
             }
-            HairRow("Aggressive park", "Sleep idle prime cores harder · saves power, may stutter", height = 48) {
+            HairRow("Aggressive park", "Sleep idle prime cores harder · saves power, may stutter", height = 44) {
                 InkToggle(aggressivePark, onAggressiveParkChange)
             }
             Spacer(Modifier.weight(1f))
