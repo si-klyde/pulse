@@ -13,6 +13,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,6 +37,7 @@ import com.kei.pulse.ui.TunerViewModel
 import com.kei.pulse.ui.theme.PulseTheme
 import com.kei.pulse.ui.shell.RailShell
 import com.kei.pulse.ui.shell.Section
+import com.kei.pulse.ui.sections.PowerSection
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -224,8 +226,11 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     Section.POWER, Section.FAN -> {
+                        val hostManual = section == Section.POWER
+                        val tuner: @Composable () -> Unit = {
                         MainTunerScreen(
                             embedded = true,
+                            hideAutoTdp = hostManual,
                             state = state,
                             sleepProfileId = settings.sleepProfileId.takeIf { settings.sleepProfileEnabled },
                             onApplyProfile = viewModel::applyProfile,
@@ -306,6 +311,30 @@ class MainActivity : ComponentActivity() {
                             autoTdpBias = autoTdpBias,
                             onAutoTdpBiasChange = viewModel::setAutoTdpBias,
                         )
+                        }
+                        if (hostManual) {
+                            PowerSection(
+                                autoOn = autoTdpEnabled,
+                                onAutoChange = ::setAutoTdpDefaultEnabled,
+                                fpsTarget = autoTdpFpsTarget,
+                                fpsOptions = viewModel.autoTdpFpsOptions,
+                                onFpsTargetChange = viewModel::setAutoTdpFpsTarget,
+                                bias = autoTdpBias,
+                                onBiasChange = viewModel::setAutoTdpBias,
+                                aggressivePark = autoTdpAggressivePark,
+                                onAggressiveParkChange = viewModel::setAutoTdpAggressivePark,
+                                showWattCaps = viewModel.autoTdpShowWattCaps,
+                                displaySummary = listOfNotNull(
+                                    if (resolutionScale == 100) "native" else "$resolutionScale %",
+                                    refreshRate?.let { "$it Hz" },
+                                ).joinToString(" · "),
+                                fanSummary = com.kei.pulse.data.FanController.labelFor(fanMode),
+                                perGameCount = perAppConfigs.size,
+                                manualContent = tuner,
+                            )
+                        } else {
+                            tuner()
+                        }
                     }
                     }
                     }

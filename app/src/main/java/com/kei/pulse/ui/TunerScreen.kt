@@ -140,6 +140,8 @@ fun MainTunerScreen(
     onAutoTdpBiasChange: (AutoTdpBias) -> Unit,
     /** Hosted inside [com.kei.pulse.ui.shell.RailShell]: no header, telemetry HUD or page background. */
     embedded: Boolean = false,
+    /** Manual mode of the Power section: the Auto controls live in PowerSection, so hide them here. */
+    hideAutoTdp: Boolean = false,
 ) {
     var dialogProfileId by remember { mutableStateOf<String?>(null) }
 
@@ -162,8 +164,8 @@ fun MainTunerScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = if (embedded) 24.dp else 20.dp, vertical = if (embedded) 16.dp else 28.dp),
+                .then(if (hideAutoTdp) Modifier else Modifier.verticalScroll(rememberScrollState()))
+                .padding(horizontal = if (hideAutoTdp) 0.dp else if (embedded) 24.dp else 20.dp, vertical = if (hideAutoTdp) 0.dp else if (embedded) 16.dp else 28.dp),
             verticalArrangement = Arrangement.spacedBy(if (embedded) 14.dp else 18.dp),
         ) {
             if (!embedded) Header(
@@ -206,8 +208,8 @@ fun MainTunerScreen(
                     )
                 }
 
-                PulseSectionLabel("Performance tier")
-                AutoTdpModule(
+                if (!hideAutoTdp) PulseSectionLabel("Performance tier")
+                if (!hideAutoTdp) AutoTdpModule(
                     enabled = autoTdpEnabled,
                     onEnabledChange = onAutoTdpEnabledChange,
                     fpsTarget = autoTdpFpsTarget,
