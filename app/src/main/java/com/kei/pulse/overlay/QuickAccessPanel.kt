@@ -153,16 +153,18 @@ private fun QuickAccessPanel(
     val tab = tabs[tabIndex]
     // Every applied control flashes its confirmation in the footer (browsing==editing made a silent apply a
     // real incident; the flash makes each one visible). Sliders + scope flash their own way (null label).
+    // Is AutoTDP tuning THIS foreground game? Decides whether a fan-mode pick applies now or after the game.
+    val autoTdpLive = QuickAccessPerApp.effectiveAutoTdpOn(perApp, settings.autoTdpDefaultEnabled)
     val dispatch: (QuickAccessAction) -> Unit = { a ->
         onAction(a)
-        flashLabel(a)?.let(showFlash)
+        flashLabel(a, autoTdpLive)?.let(showFlash)
     }
     // The live control list for the active tab. Rebuilt each recomposition off the current settings/perApp, so
     // selections + visibility (e.g. AutoTDP sub-controls) are always current.
     val items: List<NavItem> = when (tab) {
         QuickAccessTab.PERFORMANCE ->
             performanceItems(stats, settings, perApp, sliderLocal, pendingScope, { pendingScope = it }, showFlash, dispatch)
-        QuickAccessTab.FAN -> fanItems(settings, dispatch)
+        QuickAccessTab.FAN -> fanItems(settings, autoTdpLive, dispatch)
         QuickAccessTab.RGB -> lightingItems(settings, dispatch)
         QuickAccessTab.OVERLAY -> overlayItems(settings, dispatch)
         QuickAccessTab.SYSTEM -> systemItems(stats, sliderLocal, dispatch)
@@ -371,11 +373,32 @@ private fun performanceItems(
     return items
 }
 
-private fun fanItems(settings: AppSettings, onAction: (QuickAccessAction) -> Unit): List<NavItem> {
+private fun fanItems(settings: AppSettings, autoTdpLive: Boolean, onAction: (QuickAccessAction) -> Unit): List<NavItem> {
     val items = mutableListOf<NavItem>()
     val modes = FanController.MODES
-    items += chipNavItem("Fan mode", modes.map { it.label }, modes.indexOfFirst { it.value == settings.managedFanMode }) { i ->
+    val modeChips = chipNavItem("Fan mode", modes.map { it.label }, modes.indexOfFirst { it.value == settings.managedFanMode }) { i ->
         onAction(QuickAccessAction.SetFanMode(modes[i].value))
+    }
+    // AutoTDP owns the fan in-game: only Custom keeps running, so say so under the chips instead of letting a
+    // Silent/Sport pick look like it took effect (it applies once the tuned game exits).
+    items += if (autoTdpLive && settings.managedFanMode != FanController.CUSTOM) {
+        NavItem(
+            render = { focused ->
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    modeChips.render(focused)
+                    Text(
+                        "AutoTDP is tuning this game — fan runs as Smart; only Custom applies in-game",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+            onActivate = modeChips.onActivate,
+            onLeft = modeChips.onLeft,
+            onRight = modeChips.onRight,
+        )
+    } else {
+        modeChips
     }
     if (settings.managedFanMode == FanController.CUSTOM) {
         items += toggleNavItem("Hold target temp", settings.fanSmartEnabled) { onAction(QuickAccessAction.SetFanSmart(!settings.fanSmartEnabled)) }
@@ -622,14 +645,18 @@ private fun biasLabel(b: AutoTdpBias): String = when (b) {
  * The footer confirmation for an applied action ("Bias Smooth", "Fan Sport"). Null = the control provides its
  * own feedback (sliders show their value live; the scope commit flashes a richer message of its own).
  */
-private fun flashLabel(a: QuickAccessAction): String? = when (a) {
+private fun flashLabel(a: QuickAccessAction, autoTdpLive: Boolean = false): String? = when (a) {
     QuickAccessAction.ToggleAutoTdp -> "Mode: AutoTDP"
     is QuickAccessAction.SetTier -> "Mode: ${a.tier.label}"
     QuickAccessAction.SetStockMode -> "Mode: Stock"
     is QuickAccessAction.SetFpsTarget -> "Frame target ${a.fps}"
     is QuickAccessAction.SetBias -> "Bias ${biasLabel(a.bias)}"
     is QuickAccessAction.SetAggressivePark -> "Aggressive park ${if (a.enabled) "on" else "off"}"
-    is QuickAccessAction.SetFanMode -> "Fan ${FanController.MODES.firstOrNull { it.value == a.mode }?.label ?: a.mode}"
+    is QuickAccessAction.SetFanMode -> {
+        val label = FanController.MODES.firstOrNull { it.value == a.mode }?.label ?: a.mode
+        // Honest footer: under AutoTDP a non-Custom pick is saved but the fan stays Smart until the game exits.
+        if (QuickAccessPerApp.fanModeDeferredByAutoTdp(autoTdpLive, a.mode)) "Fan $label — after AutoTDP" else "Fan $label"
+    }
     is QuickAccessAction.SetFanSmart -> "Hold target temp ${if (a.enabled) "on" else "off"}"
     is QuickAccessAction.SetFanTargetTemp -> "Target temp ${a.tempC}°C"
     is QuickAccessAction.SetFanBias -> "Fan bias ${fanBiasLabel(a.bias)}"

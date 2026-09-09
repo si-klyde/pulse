@@ -72,6 +72,14 @@ object QuickAccessPerApp {
             else -> false                          // a tier/Custom binding ⇒ AutoTDP not active for this app
         }
 
+    /**
+     * Under AutoTDP only the Custom fan loop is honoured; Silent/Smart/Sport are replaced by vendor Smart for
+     * the session (`FanArbiter` + `startAutoTdp`). True when picking [mode] now changes nothing until the
+     * tuned game exits — the Quick Access panel labels the choice as deferred instead of confirming it.
+     */
+    fun fanModeDeferredByAutoTdp(autoOn: Boolean, mode: Int): Boolean =
+        autoOn && mode != com.kei.pulse.data.FanController.CUSTOM
+
     /** The game's effective AutoTDP fps target — its per-app value, else the global default. */
     fun effectiveFps(config: PerAppConfig?, globalFps: Int): Int = config?.fpsTarget ?: globalFps
 

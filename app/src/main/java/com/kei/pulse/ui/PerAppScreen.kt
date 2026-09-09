@@ -359,9 +359,18 @@ private fun PerAppConfigDialog(
                         }
                 }
 
-                // AutoTDP uses the global fan choice; the per-app fan picker is hidden for it until the
-                // service layer supports per-app fan overrides during AutoTDP.
-                if (!PerAppConfig.isAuto(profileBinding)) {
+                // AutoTDP uses the global fan choice (Custom cascades, anything else runs as Smart); the per-app
+                // fan picker is replaced by a note for it until the service layer supports per-app fan overrides
+                // during AutoTDP.
+                if (PerAppConfig.isAuto(profileBinding)) {
+                    DialogGroupLabel("FAN (ODIN)")
+                    Text(
+                        text = "Uses the global fan while AutoTDP tunes this app: a Custom fan keeps running " +
+                            "(cascaded); Silent, Smart or Sport run as Smart.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
                     DialogGroupLabel("FAN (ODIN)")
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),

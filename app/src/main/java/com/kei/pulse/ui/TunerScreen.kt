@@ -232,10 +232,10 @@ fun MainTunerScreen(
 
                 CurrentFrequenciesCard(state = state)
 
-                // AutoTDP manages the governor + clocks itself, but the fan stays user-configurable: a
-                // Custom fan set here keeps running (cascaded) during AutoTDP, otherwise Smart is used.
-                // Only the governor hides while AutoTDP is on.
-                FanModule(currentMode = fanMode, onSelect = onSelectFanMode, editor = fanCurveEditor)
+                // AutoTDP manages the governor + clocks itself; the fan stays user-configurable but only
+                // Custom is honoured in-session (cascaded), every other mode runs as Smart — the module
+                // says so while AutoTDP is on. Only the governor hides while AutoTDP is on.
+                FanModule(currentMode = fanMode, onSelect = onSelectFanMode, editor = fanCurveEditor, autoTdpOn = autoTdpEnabled)
                 if (!autoTdpEnabled) {
                     GovernorModule(current = governor, onSelect = onSelectGovernor)
                 }

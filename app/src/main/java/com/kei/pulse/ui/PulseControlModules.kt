@@ -189,6 +189,8 @@ fun FanModule(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
     editor: FanCurveEditorBindings? = null,
+    /** AutoTDP is the default for games: only Custom is honoured in-session, other modes run as Smart. */
+    autoTdpOn: Boolean = false,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         PulseSectionLabel("Fan · ${FanController.labelFor(currentMode)}")
@@ -210,11 +212,32 @@ fun FanModule(
                 )
             }
         }
+        if (autoTdpOn) {
+            Text(
+                text = fanUnderAutoTdpCaption(currentMode, customAvailable = editor != null),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
         if (currentMode == FanController.CUSTOM && editor != null) {
             Spacer(Modifier.height(10.dp))
             FanCurveEditor(bindings = editor)
         }
     }
+}
+
+/** The one-line truth about the fan while AutoTDP tunes a game (pure, so the copy is testable). */
+fun fanUnderAutoTdpCaption(currentMode: Int?, customAvailable: Boolean): String = when {
+    currentMode == FanController.CUSTOM ->
+        "While AutoTDP tunes a game, Custom keeps running; Hold-target is capped 2 °C under the thermal " +
+            "ceiling so the fan spins up before the clocks trim."
+    customAvailable ->
+        "While AutoTDP tunes a game the fan runs as Smart regardless of this choice — pick Custom to keep " +
+            "your own quieter loop in-game. This mode applies outside tuned games."
+    else ->
+        "While AutoTDP tunes a game the fan runs as Smart regardless of this choice. This mode applies " +
+            "outside tuned games."
 }
 
 /**
@@ -958,9 +981,11 @@ private fun wattLabel(w: Float): String = "%.1f".format(w).removeSuffix(".0")
 
 /**
  * AutoTDP master toggle. When on, PULSE dynamically trims the CPU first, then GPU, to hold each
- * foreground game's refresh-rate FPS (uses your Custom fan if set, otherwise Smart; refresh rate
- * untouched). It becomes the default for any game without its own per-app binding, so the manual
- * tier/clock controls are locked — but the fan stays adjustable.
+ * foreground game's refresh-rate FPS (refresh rate untouched). It becomes the default for any game
+ * without its own per-app binding, so the manual tier/clock controls are locked. Fan: only the Custom
+ * loop is honoured during a session (target capped 2 °C under the thermal ceiling so it spins up before
+ * the clocks trim); Silent/Smart/Sport all run as vendor Smart until the game exits — see
+ * `FanArbiter` + `AutoTuneController.autoTdpFanTargetC`.
  */
 @Composable
 fun AutoTdpModule(
@@ -1010,10 +1035,11 @@ fun AutoTdpModule(
             Text(
                 text = if (enabled) {
                     "Automatically tunes the CPU and GPU clocks on the fly, aiming to hold each app's " +
-                        "frame rate at the lowest power. It uses your Custom fan if you've set one (it keeps " +
-                        "running, cascaded), otherwise the Smart fan. The tier and manual clock controls below " +
-                        "are locked while AutoTDP is on, but the fan stays adjustable. Per-app bindings still " +
-                        "take priority, and a hand-tuned manual profile may still perform better in some games."
+                        "frame rate at the lowest power. Fan: a Custom fan keeps running (its target capped " +
+                        "2 °C under the thermal ceiling so it spins up before clocks trim); Silent, Smart and " +
+                        "Sport all run as Smart while a game is tuned. The tier and manual clock controls below " +
+                        "are locked while AutoTDP is on. Per-app bindings still take priority, and a hand-tuned " +
+                        "manual profile may still perform better in some games."
                 } else {
                     "Automatically tunes the CPU and GPU clocks on the fly to hold your FPS target at the " +
                         "lowest power — games, emulators and even media — using your Custom fan if set, " +
