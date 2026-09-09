@@ -45,8 +45,9 @@ import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.height
+import com.kei.pulse.ui.shell.PulseSwitch
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -189,7 +190,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                Switch(
+                PulseSwitch(
                     checked = settings.pulseEnabled,
                     onCheckedChange = onPulseEnabledChange,
                 )
@@ -248,7 +249,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                Switch(
+                PulseSwitch(
                     checked = settings.applyLastProfileOnBoot,
                     onCheckedChange = onApplyLastProfileOnBootChange,
                 )
@@ -275,7 +276,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                Switch(
+                PulseSwitch(
                     checked = settings.sleepProfileEnabled,
                     onCheckedChange = onSleepProfileEnabledChange,
                     enabled = sleepProfileOptions.isNotEmpty(),
@@ -318,7 +319,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                Switch(
+                PulseSwitch(
                     checked = perAppEnabled,
                     onCheckedChange = onPerAppEnabledChange,
                 )
@@ -360,7 +361,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                Switch(
+                PulseSwitch(
                     checked = perAppSwitchNotices,
                     onCheckedChange = onPerAppSwitchNoticesChange,
                 )
@@ -387,7 +388,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                Switch(
+                PulseSwitch(
                     checked = overlayEnabled,
                     onCheckedChange = onOverlayEnabledChange,
                 )
@@ -412,7 +413,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                Switch(
+                PulseSwitch(
                     checked = settings.quickAccessEnabled,
                     onCheckedChange = onQuickAccessChange,
                 )
@@ -437,7 +438,7 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Switch(
+                    PulseSwitch(
                         checked = settings.quickAccessShowHandle,
                         onCheckedChange = onQuickAccessShowHandleChange,
                     )
@@ -1149,25 +1150,17 @@ private fun SettingsSection(
     title: String,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.medium),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        ),
-    ) {
+    // Flat group, not a card: a hairline above, the title as a quiet label, then the rows.
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outlineVariant))
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             content()
         }

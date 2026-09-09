@@ -29,8 +29,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import com.kei.pulse.ui.shell.PulseSwitch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -329,7 +329,7 @@ fun FanCurveEditor(bindings: FanCurveEditorBindings, modifier: Modifier = Modifi
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Switch(checked = bindings.smartEnabled, onCheckedChange = bindings.onSmartToggle)
+                PulseSwitch(checked = bindings.smartEnabled, onCheckedChange = bindings.onSmartToggle)
             }
             Spacer(Modifier.height(8.dp))
 
@@ -668,30 +668,32 @@ private fun PulseChip(
     onClick: () -> Unit,
     sub: String? = null,
 ) {
-    val container = if (selected) accent.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surfaceContainerHigh
-    val borderColor = if (selected) accent else MaterialTheme.colorScheme.outline
+    // Design vocabulary: unselected = hairline outline, selected = inverted ink fill. `accent` is ignored on
+    // purpose — colour is reserved for meaning (temperature/load), never for selection.
+    @Suppress("UNUSED_VARIABLE") val unused = accent
+    val selectedFill = MaterialTheme.colorScheme.onSurface
     Surface(
-        color = container,
+        color = if (selected) selectedFill else MaterialTheme.colorScheme.surface,
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier
-            .border(1.dp, borderColor, MaterialTheme.shapes.medium)
+            .then(if (selected) Modifier else Modifier.border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.medium))
             .clickable(onClick = onClick),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.titleSmall,
-                color = if (selected) accent else MaterialTheme.colorScheme.onSurface,
+                color = if (selected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
             )
             if (sub != null) {
                 Text(
                     text = sub,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (selected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                 )
             }
@@ -862,7 +864,7 @@ fun GpuFloorModule(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Switch(checked = locked, onCheckedChange = onToggleLock)
+            PulseSwitch(checked = locked, onCheckedChange = onToggleLock)
         }
         if (locked) {
             Text(
@@ -940,7 +942,7 @@ fun PowerTargetModule(
                         color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                     )
                 }
-                Switch(checked = enabled, onCheckedChange = onEnabledChange)
+                PulseSwitch(checked = enabled, onCheckedChange = onEnabledChange)
             }
             if (enabled) {
                 Slider(
@@ -969,7 +971,7 @@ fun PowerTargetModule(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
-                    Switch(checked = cpuOnly, onCheckedChange = onCpuOnlyChange)
+                    PulseSwitch(checked = cpuOnly, onCheckedChange = onCpuOnlyChange)
                 }
             }
         }
@@ -1030,7 +1032,7 @@ fun AutoTdpModule(
                         color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                     )
                 }
-                Switch(checked = enabled, onCheckedChange = onEnabledChange)
+                PulseSwitch(checked = enabled, onCheckedChange = onEnabledChange)
             }
             Text(
                 text = if (enabled) {
@@ -1089,7 +1091,7 @@ fun AutoTdpModule(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Switch(checked = aggressivePark, onCheckedChange = onAggressiveParkChange)
+                    PulseSwitch(checked = aggressivePark, onCheckedChange = onAggressiveParkChange)
                 }
                 Text(
                     text = "Efficiency",

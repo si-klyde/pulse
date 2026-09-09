@@ -689,6 +689,14 @@ class TunerViewModel(
         .scan(emptyList<Float>()) { acc, snap -> (acc + (snap.batteryDrawW ?: acc.lastOrNull() ?: 0f)).takeLast(60) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** Live fan duty %, polled every 2 s while shown. */
+    val fanDuty: StateFlow<Int?> = flow {
+        while (true) {
+            emit(readFanDutyPercent())
+            delay(2_000)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     suspend fun readTelemetry(): TelemetrySnapshot {
         val snap = withContext(Dispatchers.IO) { telemetryReader.read(state.value.policies) }
         updatePeakCalibration(snap)

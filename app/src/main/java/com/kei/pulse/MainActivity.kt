@@ -117,6 +117,7 @@ class MainActivity : ComponentActivity() {
                     val section = Section.entries[sectionOrdinal]
                     val telemetry = viewModel.telemetry.collectAsStateWithLifecycle().value
                     val drawHistory = viewModel.drawHistory.collectAsStateWithLifecycle().value
+                    val fanDuty = viewModel.fanDuty.collectAsStateWithLifecycle().value
                     val fanEditor = if (customFanSupported) {
                         FanCurveEditorBindings(
                             curve = settings.fanCurve,
@@ -166,7 +167,7 @@ class MainActivity : ComponentActivity() {
                         currentDrawW = telemetry.batteryDrawW,
                         telemetry = telemetry,
                         policies = state.policies,
-                        fanPercent = null,
+                        fanPercent = fanDuty,
                         batteryTimeLeft = null,
                     ) {
                     when (section) {
@@ -259,7 +260,7 @@ class MainActivity : ComponentActivity() {
                             onSelectMode = ::onFanModeSelected,
                             editor = fanEditor,
                             autoOn = autoTdpEnabled,
-                            liveDutyPercent = null,
+                            liveDutyPercent = fanDuty,
                         )
                     }
                     Section.POWER -> {
