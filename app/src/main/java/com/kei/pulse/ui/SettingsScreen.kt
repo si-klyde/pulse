@@ -44,6 +44,10 @@ import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.height
 import com.kei.pulse.ui.shell.PulseSwitch
 import com.kei.pulse.ui.shell.Seg
@@ -749,10 +753,8 @@ private fun ManualRgbControls(
                 ManualStickSwatch("R", settings.rgbManualRightColor, settings.rgbManualRightBrightness)
             }
         }
-        // Right — the wordmark picker, fixed width, flush to the right edge
         Column(
-            modifier = Modifier.width(380.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.width(360.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             PulseColorPicker(
@@ -763,22 +765,6 @@ private fun ManualRgbControls(
                 onBrightness = { bright = it },
                 onCommit = { commit() },
             )
-            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-                Text(
-                    text = "color",
-                    modifier = Modifier.weight(17f),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = "brightness",
-                    modifier = Modifier.weight(12f),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
     }
 }
@@ -815,6 +801,11 @@ private val PULSE_GLYPHS = listOf(
  * brightness ramp in the chosen hue — drag up/down to choose brightness. Equalizer bars above and below pulse.
  * Left ~3/5 (x < split) edits colour by x; right ~2/5 edits brightness by y. Commits on release.
  */
+/**
+ * Two strips: hue (full spectrum) and brightness (black → the chosen hue). Tap or drag sets the value live;
+ * the colour is committed to the sticks when the finger lifts. Square thumbs, hairline frames — same vocabulary
+ * as every other control.
+ */
 @Composable
 private fun PulseColorPicker(
     hue: Float,
@@ -824,100 +815,67 @@ private fun PulseColorPicker(
     onCommit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // pointerInput(Unit) runs once and captures these — keep them fresh so switching sticks isn't ignored.
     val latestOnHue = rememberUpdatedState(onHue)
     val latestOnBrightness = rememberUpdatedState(onBrightness)
     val latestOnCommit = rememberUpdatedState(onCommit)
-    val barAlpha by rememberInfiniteTransition(label = "bars").animateFloat(
-        initialValue = 0.4f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(animation = tween(1300, easing = LinearEasing), repeatMode = RepeatMode.Reverse),
-        label = "barAlpha",
-    )
-    Canvas(
-        modifier = modifier
-            .aspectRatio(2.4f)
-            .pointerInput(Unit) {
-                // One low-level gesture that CONSUMES from touch-down, so the parent vertical scroll can't steal
-                // the drag (the old tap+drag detectors fought the scroll and froze). Handles tap and drag alike.
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    down.consume()
-                    pickFromPosition(down.position, size.width.toFloat(), size.height.toFloat(), latestOnHue.value, latestOnBrightness.value)
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                        if (!change.pressed) break
-                        change.consume()
-                        pickFromPosition(change.position, size.width.toFloat(), size.height.toFloat(), latestOnHue.value, latestOnBrightness.value)
-                    }
-                    latestOnCommit.value()
-                }
-            },
-    ) {
-        val w = size.width
-        val h = size.height
-        val px = w * 0.04f
-        val b = (w - px * 2f) / 29f
-        val topOff = (h - 12.6f * b) / 2f
-        val barH = 1.6f * b
-        val letterY0 = topOff + 2.4f * b
-        val letterH = 7f * b
-        val barBotY = topOff + 10.2f * b
-        val segGap = b * 0.3f
-
-        fun bars(y: Float) {
-            val cz = listOf(Color(0xFFE23B86), Color(0xFF2BD07A), Color(0xFF5B7CFF), Color(0xFFB56CFF))
-            val czSeg = (17f * b - 3 * segGap) / 4f
-            for (k in 0..3) drawRect(cz[k].copy(alpha = barAlpha), Offset(px + k * (czSeg + segGap), y), Size(czSeg, barH))
-            val bzStart = px + 18f * b
-            val bz = listOf(Color(0xFFCFD6E6), Color(0xFF9AA3B8), Color(0xFF5B6478))
-            val bzSeg = (11f * b - 2 * segGap) / 3f
-            for (k in 0..2) drawRect(bz[k].copy(alpha = barAlpha), Offset(bzStart + k * (bzSeg + segGap), y), Size(bzSeg, barH))
-        }
-        bars(topOff)
-        bars(barBotY)
-
-        val blk = b * 0.84f
-        for (i in 0..4) {
-            val glyph = PULSE_GLYPHS[i]
-            val lx = px + i * 6f * b
-            for (r in 0..6) for (c in 0..4) {
-                if (glyph[r][c] != '1') continue
-                val fill = if (i < 3) {
-                    Color(android.graphics.Color.HSVToColor(floatArrayOf((i * 5 + c) / 14f * 360f, 0.85f, 1f)))
-                } else {
-                    Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, 0.85f, (1f - r / 6f).coerceIn(0.08f, 1f))))
-                }
-                drawRect(fill, Offset(lx + c * b, letterY0 + r * b), Size(blk, blk))
-            }
-        }
-
-        val cw = 3.dp.toPx()
-        // Hue cursor — vertical line over the P-U-L spectrum.
-        val hx = px + (hue / 360f).coerceIn(0f, 1f) * 17f * b
-        drawRect(Color.Black.copy(alpha = 0.5f), Offset(hx - cw, letterY0 - b * 0.4f), Size(cw * 2.2f, letterH + b * 0.8f))
-        drawRect(Color.White, Offset(hx - cw / 2f, letterY0 - b * 0.4f), Size(cw, letterH + b * 0.8f))
-        // Brightness cursor — horizontal line over the S-E ramp.
-        val seL = px + 18f * b
-        val seR = px + 29f * b
-        val by = letterY0 + (1f - brightness.coerceIn(0f, 1f)) * letterH
-        drawRect(Color.Black.copy(alpha = 0.5f), Offset(seL, by - cw), Size(seR - seL, cw * 2.2f))
-        drawRect(Color.White, Offset(seL, by - cw / 2f), Size(seR - seL, cw))
+    val hueColors = remember { (0..12).map { Color(android.graphics.Color.HSVToColor(floatArrayOf(it * 30f, 1f, 1f))) } }
+    val chosen = Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, 1f, 1f)))
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        PickerStrip(
+            label = "Colour",
+            fraction = hue / 360f,
+            brush = Brush.horizontalGradient(hueColors),
+            onFraction = { latestOnHue.value(it * 360f) },
+            onRelease = { latestOnCommit.value() },
+        )
+        PickerStrip(
+            label = "Brightness",
+            fraction = brightness,
+            brush = Brush.horizontalGradient(listOf(Color.Black, chosen)),
+            onFraction = { latestOnBrightness.value(it) },
+            onRelease = { latestOnCommit.value() },
+        )
     }
 }
 
-/** Map a touch position to hue (left zone, by x) or brightness (right zone, by y), matching the draw geometry. */
-private fun pickFromPosition(pos: Offset, w: Float, h: Float, onHue: (Float) -> Unit, onBrightness: (Float) -> Unit) {
-    val px = w * 0.04f
-    val b = (w - px * 2f) / 29f
-    val splitX = px + 17.5f * b
-    val letterY0 = (h - 12.6f * b) / 2f + 2.4f * b
-    val letterH = 7f * b
-    if (pos.x < splitX) {
-        onHue(((pos.x - px) / (17f * b)).coerceIn(0f, 1f) * 360f)
-    } else {
-        onBrightness((1f - (pos.y - letterY0) / letterH).coerceIn(0f, 1f))
+@Composable
+private fun PickerStrip(label: String, fraction: Float, brush: Brush, onFraction: (Float) -> Unit, onRelease: () -> Unit) {
+    val onFractionState = rememberUpdatedState(onFraction)
+    val onReleaseState = rememberUpdatedState(onRelease)
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(28.dp)
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = { p -> onFractionState.value((p.x / size.width).coerceIn(0f, 1f)); onReleaseState.value() })
+                }
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDrag = { change, _ -> change.consume(); onFractionState.value((change.position.x / size.width).coerceIn(0f, 1f)) },
+                        onDragEnd = { onReleaseState.value() },
+                        onDragCancel = { onReleaseState.value() },
+                    )
+                },
+        ) {
+            Box(Modifier.fillMaxSize().padding(vertical = 8.dp).background(brush).border(1.dp, MaterialTheme.colorScheme.outline))
+            // Thumb: 12×28 square, ink with a black inset so it reads over any hue.
+            Box(
+                Modifier
+                    .fillMaxWidth(fraction.coerceIn(0f, 1f))
+                    .fillMaxSize(),
+            ) {
+                Box(
+                    Modifier
+                        .align(Alignment.CenterEnd)
+                        .width(12.dp)
+                        .fillMaxHeight()
+                        .background(MaterialTheme.colorScheme.onSurface)
+                        .border(2.dp, MaterialTheme.colorScheme.surface),
+                )
+            }
+        }
     }
 }
 
