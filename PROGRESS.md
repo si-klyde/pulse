@@ -90,14 +90,17 @@ Also done since:
 - Overlays (Phase C): OSD and Quick Access on smoke surfaces; Quick Access is one column (brightness/volume,
   Power Auto|Manual|Off, Fan, Overlay, Lights), bumpers jump between groups; game name in the header.
 
+Polish pass (2026-09-09, evening): header scrim; System copy in plain terms; tile radio → segmented; FilterChips →
+design Chip; slider colours; per-game hairline rows with rule summaries; per-game dialog vocabulary (Follows Power /
+Auto / Off · runs stock / tiers; Same as Power); inverted tier cards; 12 dp radius only on the tile sheet; Lights manual
+picker → plain hue + brightness strips (last of the old branding gone). Charging: guard + vendor toggles (see commit).
+
 Next (in order):
 1. Release build with R8 (debug RSS ~180 MB is what gets PULSE killed under heavy games).
-2. Remaining Material widgets: RadioButton rows → Seg, Slider colours, per-app rows → hairline list with rule
-   summary, `Per game · edit` sheet per the board, Lights section per board, System `About` copy.
-3. Tier cards in Manual → `OptionCard`; PolicyCard → slim slider rows.
-4. Charging separation (`is_charging_separation` / `percent_80_charge_limit` Settings.System keys, verified on RP6):
-   System → Charging group, Quick Access pill, optional "separate while gaming on power".
-5. Live AutoTDP action in the Power section header ("Holding · caps …") from `OverlayStats.autoTdp`.
+2. PolicyCard (Manual clock sliders) → slim label-left rows; Current-values pill row → facts.
+3. Live AutoTDP action in the Power section header ("Holding · caps …") from `OverlayStats.autoTdp`.
+4. Quick Access: show the vendor's live fan mode as a hint when PULSE isn't managing the fan.
+5. Rename decision (applicationId, icon, launcher label) so the fork can coexist with upstream.
 
 ## Pre-existing issues found (not caused by this fork; candidates for later branches)
 
