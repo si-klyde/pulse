@@ -1687,7 +1687,8 @@ class ForegroundAppMonitorService : Service() {
      * load-scaled estimate at the current ceilings (flagged so the overlay shows ⚡).
      */
     private fun overlayPower(t: TelemetrySnapshot): Pair<Float?, Boolean> {
-        if (t.isDischarging) {
+        // The sysfs status string says Discharging on AC with charging separation on; ask the framework.
+        if (!com.kei.pulse.data.PowerSource.isPlugged(this)) {
             overlayChargeEma = null
             val w = t.batteryDrawW ?: return overlayDrawEma to false
             val ema = overlayDrawEma?.let { it * 0.7f + w * 0.3f } ?: w
@@ -1761,40 +1762,31 @@ class ForegroundAppMonitorService : Service() {
         )
     }
 
+    /**
+     * What is in front right now. Incremental: the first call seeds the tracker with a long lookback (so a
+     * (re)start while a game is already running is not blind), later calls feed only the events since the
+     * previous query. See [ForegroundTracker] for why activities are tracked individually.
+     */
     private fun currentForegroundPackage(): String? {
         val usageStats = getSystemService<UsageStatsManager>() ?: return null
         val now = System.currentTimeMillis()
-        val events = usageStats.queryEvents(now - EVENT_WINDOW_MS, now)
-        var latest: String? = null
-        val event = UsageEvents.Event()
-        while (events.hasNextEvent()) {
-            events.getNextEvent(event)
-            if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
-                latest = event.packageName
-            }
-        }
-        // (Re)start blind spot: a game already in front produced its RESUMED event long before the 10 s window
-        // (typically after a low-memory kill mid-game). Until we have ever seen a foreground, look back far
-        // enough to find it — otherwise AutoTDP, the OSD and Quick Access stay dark until the next app switch.
-        if (latest == null && lastForeground == null) {
-            if (!startupLookbackDone) {
-                startupLookbackDone = true
-                val wide = usageStats.queryEvents(now - STARTUP_LOOKBACK_MS, now)
-                val seq = sequence {
-                    val e = UsageEvents.Event()
-                    while (wide.hasNextEvent()) { wide.getNextEvent(e); yield(ForegroundResolver.Ev(e.eventType, e.packageName, e.className)) }
+        val from = if (foregroundQueryFromMs == 0L) now - STARTUP_LOOKBACK_MS else foregroundQueryFromMs - EVENT_OVERLAP_MS
+        val events = usageStats.queryEvents(from, now)
+        foregroundTracker.feed(
+            sequence {
+                val e = UsageEvents.Event()
+                while (events.hasNextEvent()) {
+                    events.getNextEvent(e)
+                    yield(ForegroundTracker.Ev(e.eventType, e.packageName, e.className, e.timeStamp))
                 }
-                startupForeground = ForegroundResolver.latestForeground(seq)
-                android.util.Log.i("PulseWatcher", "startup lookback foreground=${startupForeground ?: "none"}")
-            }
-            // Sticky until the poll loop confirms a foreground (it needs two agreeing polls, and the narrow
-            // window stays empty while the game just sits there).
-            latest = startupForeground
-        }
-        return latest
+            },
+        )
+        if (foregroundQueryFromMs == 0L) android.util.Log.i("PulseWatcher", "startup lookback foreground=${foregroundTracker.current ?: "none"}")
+        foregroundQueryFromMs = now
+        return foregroundTracker.current
     }
-    private var startupLookbackDone = false
-    private var startupForeground: String? = null
+    private val foregroundTracker = ForegroundTracker()
+    private var foregroundQueryFromMs = 0L
 
     /**
      * [force] (scope-commit path only): re-run the bind decision even though [foreground] is ALREADY the
@@ -2041,7 +2033,8 @@ class ForegroundAppMonitorService : Service() {
         private const val FAN_SLEW_MS = 300L // smooth-ramp cadence: small steps → smooth & quiet
         private const val FAN_RECHECK_MS = 120L // duty re-check cadence: catch the vendor's game-transition
         // 50% reset fast enough that the re-pin is inaudible (decoupled from the slower ramp above)
-        private const val EVENT_WINDOW_MS = 10_000L
+        /** Re-query this much before the previous query end; the tracker drops already-seen events by timestamp. */
+        private const val EVENT_OVERLAP_MS = 2_000L
         /** How far back the one-time startup lookback searches for an app that is already in front. */
         private const val STARTUP_LOOKBACK_MS = 6L * 60 * 60 * 1000
         // Per-app draw is only counted above this load — idle/menu (≈1-2%) is frozen out so it can't poison

@@ -3,28 +3,51 @@ package com.kei.pulse.appwatch
 import android.app.usage.UsageEvents
 
 /**
- * Pure logic behind "what is in front right now" from a chronological stream of usage events.
+ * What is in front right now, derived from the stream of usage events.
  *
- * The watcher normally looks only at the last few seconds, which is right for change detection but blind
- * on (re)start: a game already running produced its RESUMED event long ago. [latestForeground] walks a
- * wider window tracking each ACTIVITY separately — a game's loading activity typically STOPS right after
- * its game activity RESUMES, so "newest event" alone would wrongly say nothing is in front. The answer is
- * the package of the most recently resumed activity that has not since paused or stopped.
+ * Tracks each ACTIVITY separately: RESUMED adds it, PAUSED/STOPPED removes it, and [current] is the package
+ * of the most recently resumed activity that is still resumed. This is what makes a game's loading activity
+ * STOPPING right after its game activity RESUMED read correctly as "the game is in front".
+ *
+ * [feed] is incremental: give it whatever events arrived since the last call. Events at or before the last
+ * processed timestamp are skipped, so overlapping queries are harmless. Seed it once with a long lookback so
+ * a (re)start while a game is already running is not blind.
  */
-object ForegroundResolver {
+class ForegroundTracker {
+    data class Ev(val type: Int, val packageName: String, val className: String? = null, val timeMs: Long = 0L)
 
-    data class Ev(val type: Int, val packageName: String, val className: String? = null)
+    private val resumed = LinkedHashMap<String, String>()
+    var lastEventMs: Long = Long.MIN_VALUE
+        private set
+    // Many lifecycle events share one millisecond (a loading activity pausing as the game resumes), so the
+    // watermark alone can't de-dup: remember the exact events already seen AT the watermark timestamp.
+    private val seenAtWatermark = HashSet<String>()
 
-    fun latestForeground(events: Sequence<Ev>): String? {
-        // className → package for activities currently resumed, in resume order (LinkedHashMap keeps it).
-        val resumed = LinkedHashMap<String, String>()
+    val current: String? get() = resumed.values.lastOrNull()
+
+    fun feed(events: Sequence<Ev>) {
         for (e in events) {
             val key = (e.className ?: "") + "@" + e.packageName
+            if (e.timeMs != 0L) {
+                if (e.timeMs < lastEventMs) continue
+                val sig = "${e.type}:$key"
+                if (e.timeMs == lastEventMs) {
+                    if (!seenAtWatermark.add(sig)) continue
+                } else {
+                    lastEventMs = e.timeMs
+                    seenAtWatermark.clear()
+                    seenAtWatermark.add(sig)
+                }
+            }
             when (e.type) {
                 UsageEvents.Event.ACTIVITY_RESUMED -> { resumed.remove(key); resumed[key] = e.packageName }
                 UsageEvents.Event.ACTIVITY_PAUSED, UsageEvents.Event.ACTIVITY_STOPPED -> resumed.remove(key)
             }
         }
-        return resumed.values.lastOrNull()
     }
+}
+
+/** One-shot form of [ForegroundTracker] for a complete event window. */
+object ForegroundResolver {
+    fun latestForeground(events: Sequence<ForegroundTracker.Ev>): String? = ForegroundTracker().apply { feed(events) }.current
 }

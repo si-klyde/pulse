@@ -69,7 +69,7 @@ class SessionRecorder(
     }.getOrDefault(pkg.substringAfterLast('.'))
 
     companion object {
-        const val PERSIST_EVERY = 10
+        const val PERSIST_EVERY = 30
         const val IDLE_END_MS = 90_000L
     }
 }
