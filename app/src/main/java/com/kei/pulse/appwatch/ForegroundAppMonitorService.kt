@@ -1577,7 +1577,7 @@ class ForegroundAppMonitorService : Service() {
             "/sys/module/msm_performance/parameters/gpu_max_freq",
         )
         val dump = candidates.joinToString("\n") { path ->
-            val v = com.kei.pulse.root.RootSupport.runRootCommand("cat $path 2>/dev/null")
+            val v = com.kei.pulse.root.RootSupport.cat(path)
                 ?.trim()?.replace("\n", " ")
             "  $path = ${if (v.isNullOrBlank()) "(absent)" else v}"
         }
@@ -1622,7 +1622,7 @@ class ForegroundAppMonitorService : Service() {
         // if it's low, our selective min-lower held and the prime should follow its cap down.
         val mmStr = if (autoTdpLogTick++ % 10 == 0) {
             fun readMhz(path: String) = com.kei.pulse.root.RootSupport
-                .runRootCommand("cat $path")?.trim()?.toIntOrNull()?.div(1000) ?: -1
+                .cat(path)?.toIntOrNull()?.div(1000) ?: -1
             " mn/mx[" + policies.filterNot { it.isGpu }.joinToString(",") { p ->
                 "${p.id}:${readMhz("${p.policyPath}/scaling_min_freq")}/${readMhz(p.scalingMaxPath)}"
             } + "]"

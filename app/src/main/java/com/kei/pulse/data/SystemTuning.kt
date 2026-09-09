@@ -2,12 +2,10 @@ package com.kei.pulse.data
 
 import com.kei.pulse.model.CpuPolicyInfo
 import com.kei.pulse.root.RootSupport
+import com.kei.pulse.root.shellQuote
 import kotlin.math.pow
 
-private fun cat(path: String): String? {
-    val escaped = path.replace("'", "'\\''")
-    return RootSupport.runRootCommand("cat '$escaped' 2>/dev/null")?.trim()?.takeIf { it.isNotEmpty() }
-}
+private fun cat(path: String): String? = RootSupport.cat(path)
 
 /** Battery reads shared by the per-app draw tracker (outside the HUD's TelemetryReader). */
 object BatteryReader {
@@ -50,7 +48,7 @@ class GovernorController {
         if (cpu.isEmpty() || governor.isBlank()) return false
         val cmd = cpu.joinToString("; ") { p ->
             val path = "${p.policyPath}/scaling_governor"
-            "chmod 666 $path; echo $governor > $path; chmod 644 $path"
+            "chmod 666 $path; echo ${shellQuote(governor)} > $path; chmod 644 $path"
         }
         RootSupport.runRootCommand(cmd)
         return true
@@ -126,13 +124,13 @@ class GpuFloorController {
     fun lockToCurrentCap(kgslRoot: String): Int? {
         val maxP = "$kgslRoot/max_pwrlevel"
         val minP = "$kgslRoot/min_pwrlevel"
-        val level = RootSupport.runRootCommand("cat $maxP")?.trim()?.toIntOrNull() ?: return null
+        val level = RootSupport.cat(maxP)?.toIntOrNull() ?: return null
         RootSupport.runRootCommand(
             "chmod 666 $maxP; chmod 666 $minP; " +
                 "echo $level > $maxP; echo $level > $minP; " +
                 "chmod 444 $maxP; chmod 444 $minP",
         )
-        return RootSupport.runRootCommand("cat $minP")?.trim()?.toIntOrNull()
+        return RootSupport.cat(minP)?.toIntOrNull()
     }
 }
 
