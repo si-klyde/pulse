@@ -116,6 +116,13 @@ fun SettingsScreen(
     onSetQuickAccessCombo: () -> Unit = {},
     onClearQuickAccessCombo: () -> Unit = {},
     capturingCombo: Boolean = false,
+    /** Vendor charging controls (RP6): null = not readable yet; the group hides when the device lacks the node. */
+    chargingSupported: Boolean = false,
+    chargingSeparation: Boolean? = null,
+    chargeLimit80: Boolean? = null,
+    onChargingSeparationChange: (Boolean) -> Unit = {},
+    onChargeLimit80Change: (Boolean) -> Unit = {},
+    onChargeWhileScreenOffChange: (Boolean) -> Unit = {},
     /** Hosted in the rail shell: no page background, no title row. */
     embedded: Boolean = false,
     /** When set, only sections whose title is listed render (the rail splits Settings into Overlay / Lights / System). */
@@ -219,6 +226,30 @@ fun SettingsScreen(
                     onChange = onTileTapBehaviorChange,
                 )
             }
+        }
+
+        if (show("Charging") && chargingSupported) SettingsSection(title = "Charging") {
+            ChargingRow(
+                title = "Charging separation",
+                caption = "While the screen is on, power comes from the charger and the battery is left alone — cooler and " +
+                    "kinder to the cell. The vendor turns charging back on when the screen goes off.",
+                checked = chargingSeparation,
+                onChange = onChargingSeparationChange,
+            )
+            ChargingRow(
+                title = "Stop at 80 %",
+                caption = "The vendor's charge limit for battery longevity.",
+                checked = chargeLimit80,
+                onChange = onChargeLimit80Change,
+            )
+            ChargingRow(
+                title = "Always charge while the screen is off",
+                caption = "Fixes a vendor bug: after plugging in while asleep, or after low memory, separation can stay on with " +
+                    "the screen off and the battery never charges. PULSE checks once a minute while the screen is off and " +
+                    "re-enables charging if needed. Never touches anything while the screen is on.",
+                checked = settings.chargeWhileScreenOff,
+                onChange = onChargeWhileScreenOffChange,
+            )
         }
 
         if (show("Startup")) SettingsSection(title = "Startup") {
@@ -1088,6 +1119,21 @@ private fun OverlayItemGroup(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ChargingRow(title: String, caption: String, checked: Boolean?, onChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top,
+    ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text = title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(text = caption, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        PulseSwitch(checked = checked ?: false, onCheckedChange = onChange, enabled = checked != null)
     }
 }
 

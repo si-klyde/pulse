@@ -686,6 +686,10 @@ class TunerViewModel(
     /** The game session the home screen shows: live while a game runs, else the last recap. */
     val recap: StateFlow<com.kei.pulse.model.GameSession?> = com.kei.pulse.data.SessionFeed.current
 
+    fun setChargeWhileScreenOff(enabled: Boolean) {
+        viewModelScope.launch { settingsStorage.persistChargeWhileScreenOff(enabled) }
+    }
+
     /** Live fan duty %, polled every 2 s while shown. */
     val fanDuty: StateFlow<Int?> = flow {
         while (true) {

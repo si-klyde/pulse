@@ -74,6 +74,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.math.roundToInt
@@ -689,7 +690,8 @@ class ForegroundAppMonitorService : Service() {
             // (never fan_mode=6 unattended), darken the info-LED, un-park the prime, and kill the combo
             // producer; the vendor fan service + kernel thermal own any emergency thermals while asleep.
             val screenOn = getSystemService<android.os.PowerManager>()?.isInteractive != false
-            when (SleepGate.transition(screenWasOn, screenOn)) {
+            val transition = SleepGate.transition(screenWasOn, screenOn)
+            when (transition) {
                 SleepGate.Transition.WENT_OFF -> {
                     try {
                         onScreenOff(settings)
@@ -704,6 +706,7 @@ class ForegroundAppMonitorService : Service() {
                 SleepGate.Transition.NONE -> Unit
             }
             screenWasOn = screenOn
+            chargingGuardTick(settings, screenOn, justWentOff = transition == SleepGate.Transition.WENT_OFF)
             if (SleepGate.tickWork(screenOn) == SleepGate.TickWork.SKIP) {
                 delay(POLL_INTERVAL_MS)
                 continue
@@ -1031,6 +1034,27 @@ class ForegroundAppMonitorService : Service() {
      *  4. COMBO: tick() (which normally arms/disarms the watcher) won't run while asleep — disarm now so the
      *     detached getevent producer is killed instead of capturing (and costing polls) all night.
      */
+    private val chargingController = com.kei.pulse.data.ChargingController()
+    private var chargingGuardLastCheckMs = 0L
+
+    /**
+     * "Always charge while the screen is off": on screen-off and once a minute while off, if the device is
+     * plugged in and the vendor left the battery bypassed, write the one node that makes it charge. One root
+     * read (and rarely a write) per minute while asleep; nothing while awake. See [ChargingGuard].
+     */
+    private suspend fun chargingGuardTick(settings: AppSettings, screenOn: Boolean, justWentOff: Boolean) {
+        if (screenOn || !settings.chargeWhileScreenOff) return
+        val now = System.currentTimeMillis()
+        if (!ChargingGuard.shouldCheck(now, chargingGuardLastCheckMs, justWentOff)) return
+        chargingGuardLastCheckMs = now
+        if (!com.kei.pulse.data.PowerSource.isPlugged(this)) return
+        val node = withContext(Dispatchers.IO) { chargingController.readUsbChargeNow() }
+        if (ChargingGuard.decide(enabled = true, screenOn = false, plugged = true, usbChargeNow = node) == ChargingGuard.Action.ENABLE_CHARGE) {
+            withContext(Dispatchers.IO) { chargingController.setUsbChargeNow(true) }
+            android.util.Log.i("PulseCharge", "screen off + plugged but usb_charge_now=0 → enabled charging")
+        }
+    }
+
     private suspend fun onScreenOff(settings: AppSettings) {
         // Each hand-off is INDEPENDENTLY guarded so a failure in one never skips the others — most importantly
         // the combo disarm, which won't refire (the WENT_OFF edge is consumed once). The realistic throw

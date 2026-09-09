@@ -64,6 +64,7 @@ class SettingsStorage(private val context: Context) {
 
     // In-game overlay (OSD) preferences.
     private val overlayEnabledKey = booleanPreferencesKey("overlay_enabled")
+    private val chargeWhileScreenOffKey = booleanPreferencesKey("charge_while_screen_off")
     private val quickAccessEnabledKey = booleanPreferencesKey("quick_access_enabled")
     private val quickAccessShowHandleKey = booleanPreferencesKey("quick_access_show_handle")
     private val quickAccessComboKey = stringPreferencesKey("quick_access_combo")
@@ -126,6 +127,7 @@ class SettingsStorage(private val context: Context) {
             autoTdpAggressivePark = preferences[autoTdpAggressiveParkKey] ?: true,
             autoTdpBias = preferences[autoTdpBiasKey]?.let(::parseAutoTdpBias) ?: AutoTdpBias.EFFICIENT,
             overlayEnabled = preferences[overlayEnabledKey] ?: false,
+            chargeWhileScreenOff = preferences[chargeWhileScreenOffKey] ?: true,
             quickAccessEnabled = preferences[quickAccessEnabledKey] ?: false,
             quickAccessShowHandle = preferences[quickAccessShowHandleKey] ?: true,
             quickAccessCombo = preferences[quickAccessComboKey],
@@ -181,6 +183,10 @@ class SettingsStorage(private val context: Context) {
 
     suspend fun persistPulseEnabled(enabled: Boolean) {
         context.settingsDataStore.edit { preferences -> preferences[pulseEnabledKey] = enabled }
+    }
+
+    suspend fun persistChargeWhileScreenOff(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences -> preferences[chargeWhileScreenOffKey] = enabled }
     }
 
     suspend fun persistOverlayEnabled(enabled: Boolean) {

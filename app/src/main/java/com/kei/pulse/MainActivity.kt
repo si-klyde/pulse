@@ -120,6 +120,17 @@ class MainActivity : ComponentActivity() {
                     val section = Section.entries[sectionOrdinal]
                     val telemetry = viewModel.telemetry.collectAsStateWithLifecycle().value
                     val recap = viewModel.recap.collectAsStateWithLifecycle().value
+                    // Vendor charging keys are ordinary Settings.System values — poll them while the screen is up.
+                    val chargingKeys = androidx.compose.runtime.produceState<Pair<Boolean?, Boolean?>>(initialValue = null to null) {
+                        while (true) {
+                            fun key(k: String): Boolean? = runCatching { android.provider.Settings.System.getInt(contentResolver, k) == 1 }.getOrNull()
+                            value = key(com.kei.pulse.data.ChargingController.KEY_SEPARATION) to key(com.kei.pulse.data.ChargingController.KEY_LIMIT_80)
+                            kotlinx.coroutines.delay(2_000)
+                        }
+                    }.value
+                    val chargingSupported = androidx.compose.runtime.produceState(initialValue = false) {
+                        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.kei.pulse.data.ChargingController().isSupported() }
+                    }.value
                     val plugged = remember(telemetry) { com.kei.pulse.data.PowerSource.isPlugged(this@MainActivity) }
                     LaunchedEffect(Unit) {
                         if (com.kei.pulse.data.SessionFeed.current.value == null) {
@@ -206,8 +217,14 @@ class MainActivity : ComponentActivity() {
                             only = when (section) {
                                 Section.OVERLAY -> setOf("On-screen overlay")
                                 Section.LIGHTS -> setOf("Joystick RGB")
-                                else -> setOf("PULSE", "Quick Settings Tile", "Startup", "Sleep", "Per-app profiles", "Profiles", "About")
+                                else -> setOf("PULSE", "Charging", "Quick Settings Tile", "Startup", "Sleep", "Per-app profiles", "Profiles", "About")
                             },
+                            chargingSupported = chargingSupported,
+                            chargingSeparation = chargingKeys.first,
+                            chargeLimit80 = chargingKeys.second,
+                            onChargingSeparationChange = { on -> lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) { com.kei.pulse.data.ChargingController().setSeparation(on) } },
+                            onChargeLimit80Change = { on -> lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) { com.kei.pulse.data.ChargingController().setChargeLimit80(on) } },
+                            onChargeWhileScreenOffChange = viewModel::setChargeWhileScreenOff,
                             settings = settings,
                             onBack = { sectionOrdinal = Section.POWER.ordinal },
                             onPulseEnabledChange = ::onPulseMasterToggle,
