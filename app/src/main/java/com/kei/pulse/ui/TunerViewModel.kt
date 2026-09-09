@@ -24,6 +24,7 @@ import com.kei.pulse.data.PowerEstimator
 import com.kei.pulse.data.SettingsStorage
 import com.kei.pulse.model.PerAppConfig
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flow
 import com.kei.pulse.model.AppColorSource
 import com.kei.pulse.model.AppSettings
 import com.kei.pulse.model.AutoTdpBias
@@ -674,6 +675,29 @@ class TunerViewModel(
         }
     }
 
+    /** Live telemetry, polled once a second only while something on screen collects it. */
+    val telemetry: StateFlow<TelemetrySnapshot> = flow {
+        while (true) {
+            emit(readTelemetry())
+            delay(1_000)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TelemetrySnapshot())
+
+    /** The game session the home screen shows: live while a game runs, else the last recap. */
+    val recap: StateFlow<com.kei.pulse.model.GameSession?> = com.kei.pulse.data.SessionFeed.current
+
+    fun setChargeWhileScreenOff(enabled: Boolean) {
+        viewModelScope.launch { settingsStorage.persistChargeWhileScreenOff(enabled) }
+    }
+
+    /** Live fan duty %, polled every 2 s while shown. */
+    val fanDuty: StateFlow<Int?> = flow {
+        while (true) {
+            emit(readFanDutyPercent())
+            delay(2_000)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     suspend fun readTelemetry(): TelemetrySnapshot {
         val snap = withContext(Dispatchers.IO) { telemetryReader.read(state.value.policies) }
         updatePeakCalibration(snap)
@@ -1157,12 +1181,6 @@ class TunerViewModel(
     fun setSleepProfile(profileId: String?) {
         viewModelScope.launch {
             settingsStorage.persistSleepProfileId(profileId)
-        }
-    }
-
-    fun setThemeId(themeId: com.kei.pulse.model.PulseThemeId) {
-        viewModelScope.launch {
-            settingsStorage.persistThemeId(themeId)
         }
     }
 

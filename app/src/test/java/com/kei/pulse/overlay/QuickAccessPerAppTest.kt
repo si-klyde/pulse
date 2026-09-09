@@ -144,4 +144,25 @@ class QuickAccessPerAppTest {
         assertEquals(60, QuickAccessPerApp.effectiveFps(PerAppConfig(packageName = pkg, fpsTarget = null), globalFps = 60))
         assertEquals(60, QuickAccessPerApp.effectiveFps(null, globalFps = 60))
     }
+
+    // ---- Fan under AutoTDP: only Custom is honoured in-session; other picks are deferred to game exit ----
+
+    @Test
+    fun `non-Custom fan pick is deferred while AutoTDP tunes the game`() {
+        assertTrue(QuickAccessPerApp.fanModeDeferredByAutoTdp(autoOn = true, mode = com.kei.pulse.data.FanController.SMART))
+        assertTrue(QuickAccessPerApp.fanModeDeferredByAutoTdp(autoOn = true, mode = com.kei.pulse.data.FanController.MODES.first().value))
+    }
+
+    @Test
+    fun `Custom fan applies immediately under AutoTDP`() {
+        assertFalse(QuickAccessPerApp.fanModeDeferredByAutoTdp(autoOn = true, mode = com.kei.pulse.data.FanController.CUSTOM))
+    }
+
+    @Test
+    fun `nothing is deferred when AutoTDP is not tuning this game`() {
+        assertFalse(QuickAccessPerApp.fanModeDeferredByAutoTdp(autoOn = false, mode = com.kei.pulse.data.FanController.SMART))
+        // A tier-bound game: AutoTDP is not active for it even with the global default on.
+        val tierBound = PerAppConfig(packageName = pkg, profileBinding = "tier:MAX")
+        assertFalse(QuickAccessPerApp.effectiveAutoTdpOn(tierBound, globalDefault = true))
+    }
 }

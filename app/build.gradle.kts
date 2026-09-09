@@ -99,6 +99,10 @@ android {
     buildFeatures {
         compose = true
     }
+    testOptions {
+        // Plain-JVM unit tests touch android.util.Log via RgbController etc.; return defaults instead of throwing.
+        unitTests.isReturnDefaultValues = true
+    }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"

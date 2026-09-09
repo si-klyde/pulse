@@ -21,9 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,36 +30,33 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kei.pulse.ui.theme.Azeret
+import com.kei.pulse.ui.theme.Bricolage
 
-/**
- * Deck-Glass control vocabulary for the Quick Access bar — custom-drawn (NOT Material `FilterChip`/`Switch`) so
- * the bar reads as a console overlay matching the OSD ([OverlayContent]), and so controller FOCUS (the row) is
- * visually distinct from the SELECTED value (the filled pill / dot / slider fill).
- *
- * The panel is forced onto a translucent-dark surface regardless of the app's light/dark theme, so neutral
- * text/outline colors come from [QaColors] (always light-on-dark, contrast-safe) while the ACCENT is the user's
- * theme `primary` (visible on dark either way).
+/*
+ * Quick Access control vocabulary. Same smoke surface as the OSD; 34 dp pills with an 8 dp radius (this is a
+ * floating panel over a game, where a little radius reads better than the app's square); unselected = hairline,
+ * selected = inverted ink. Colour only for temperature in the live strip.
  */
 internal object QaColors {
-    val Surface = Color.Black.copy(alpha = 0.82f)
-    val RailFill = Color.White.copy(alpha = 0.05f)
-    val FocusFill = Color.White.copy(alpha = 0.08f)
-    val Text = Color(0xFFF3F4F6)
-    val Muted = Color(0xFFB4B9C2)
-    val Outline = Color.White.copy(alpha = 0.22f)
-    val TrackBg = Color.White.copy(alpha = 0.12f)
+    val Surface = SmokeDeep
+    val Text = OsdInk
+    val Muted = OsdInk3
+    val Outline = Hair
+    val TrackBg = Color(0x1F_FFFFFF)
+    val FocusFill = Color(0x14_FFFFFF)
 }
+
+internal val QaLabel = TextStyle(fontFamily = Bricolage, fontSize = 11.sp, lineHeight = 14.sp, color = OsdInk3)
+internal val QaBody = TextStyle(fontFamily = Bricolage, fontSize = 13.sp, lineHeight = 16.sp, color = OsdInk)
+internal val QaTitle = TextStyle(fontFamily = Bricolage, fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, color = OsdInk)
+internal val QaNum = TextStyle(fontFamily = Azeret, fontSize = 12.sp, lineHeight = 14.sp, letterSpacing = (-0.02).sp, fontFeatureSettings = "tnum", color = OsdInk)
 
 /** True when the OS animator scale is 0 (Developer Options "Animations off" / reduced motion) — read once. */
 @Composable
@@ -74,98 +69,66 @@ internal fun rememberReduceMotion(): Boolean {
 }
 
 /**
- * Wraps a row so that when it's the controller cursor ([focused]) it draws an accent LEFT-EDGE bar + a subtle
- * fill + a slight scale, and pulls itself into view (so the cursor never walks off-screen). The selected VALUE
- * lives inside [content] — separate from this row-focus treatment.
+ * Controller cursor treatment: a faint fill and a 2 dp ink bar on the left edge when [focused], and the row
+ * pulls itself into view. Touch never sees this; it's the D-pad's caret.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun QaFocusRow(focused: Boolean, content: @Composable () -> Unit) {
-    val accent = MaterialTheme.colorScheme.primary
-    val reduce = rememberReduceMotion()
     val bring = remember { BringIntoViewRequester() }
     LaunchedEffect(focused) { if (focused) runCatching { bring.bringIntoView() } }
-    val scale by animateFloatAsState(
-        targetValue = if (focused && !reduce) 1.02f else 1f,
-        animationSpec = tween(if (reduce) 0 else 150),
-        label = "qaFocusScale",
-    )
-    Box(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .bringIntoViewRequester(bring)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-                transformOrigin = TransformOrigin(0f, 0.5f)
-            }
-            .clip(RoundedCornerShape(10.dp))
             .background(if (focused) QaColors.FocusFill else Color.Transparent)
-            .drawBehind {
-                if (focused) {
-                    val w = 3.dp.toPx()
-                    drawRoundRect(
-                        color = accent,
-                        topLeft = Offset(0f, 0f),
-                        size = Size(w, size.height),
-                        cornerRadius = CornerRadius(w),
-                    )
-                }
-            }
-            .padding(start = 12.dp, end = 8.dp, top = 7.dp, bottom = 7.dp),
-    ) { content() }
+            .padding(start = 8.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+    ) {
+        Box(Modifier.width(2.dp).height(18.dp).background(if (focused) OsdInk else Color.Transparent))
+        Spacer(Modifier.width(8.dp))
+        Box(Modifier.weight(1f)) { content() }
+    }
 }
 
-/** One mode in the vertical Mode list: a radio dot + label + tagline. Selected = filled accent dot + brighter label. */
+/** One option in a vertical list: label + tagline; selected = ink text with a filled square marker. */
 @Composable
 internal fun QaModeRow(label: String, tagline: String, selected: Boolean, onSelect: () -> Unit) {
-    val accent = MaterialTheme.colorScheme.primary
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().clickable { onSelect() },
-    ) {
-        Box(
-            modifier = Modifier.size(18.dp).clip(CircleShape).border(2.dp, if (selected) accent else QaColors.Outline, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (selected) Box(Modifier.size(9.dp).clip(CircleShape).background(accent))
-        }
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { onSelect() }) {
+        Box(Modifier.size(12.dp).then(if (selected) Modifier.background(OsdInk) else Modifier.border(1.dp, Hair)))
         Spacer(Modifier.width(10.dp))
         Column {
-            Text(
-                label,
-                color = if (selected) QaColors.Text else QaColors.Text.copy(alpha = 0.82f),
-                fontSize = 13.sp,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            )
-            if (tagline.isNotBlank()) Text(tagline, color = QaColors.Muted, fontSize = 10.sp)
+            Text(label, style = QaBody.copy(fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal, color = if (selected) OsdInk else OsdInk2))
+            if (tagline.isNotBlank()) Text(tagline, style = QaLabel)
         }
     }
 }
 
-/** A labeled segmented selector: single-line pills (wraps if narrow). Selected pill = filled accent. */
+/** A labelled segmented row of 34 dp pills that share the width; unselected hairline, selected inverted. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun QaSegmentedRow(label: String, options: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit) {
-    val accent = MaterialTheme.colorScheme.primary
+internal fun QaSegmentedRow(label: String?, options: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit, mono: Boolean = false) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(label.uppercase(), color = QaColors.Muted, fontSize = 10.sp, letterSpacing = 1.sp, fontWeight = FontWeight.Medium)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (label != null) Text(label, style = QaLabel)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             options.forEachIndexed { i, text ->
                 val sel = i == selectedIndex
                 Box(
                     modifier = Modifier
+                        .weight(1f)
+                        .height(34.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(if (sel) accent else Color.Transparent)
-                        .border(1.dp, if (sel) accent else QaColors.Outline, RoundedCornerShape(8.dp))
-                        .clickable { onSelect(i) }
-                        .padding(horizontal = 12.dp, vertical = 7.dp),
+                        .background(if (sel) OsdInk else Color.Transparent)
+                        .then(if (sel) Modifier else Modifier.border(1.dp, Hair, RoundedCornerShape(8.dp)))
+                        .clickable { onSelect(i) },
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text,
-                        color = if (sel) MaterialTheme.colorScheme.onPrimary else QaColors.Text,
-                        fontSize = 12.sp,
-                        fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal,
+                        style = (if (mono) QaNum else QaBody).copy(
+                            color = if (sel) Color.Black else OsdInk2,
+                            fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal,
+                        ),
+                        maxLines = 1,
                     )
                 }
             }
@@ -173,42 +136,37 @@ internal fun QaSegmentedRow(label: String, options: List<String>, selectedIndex:
     }
 }
 
-/** A label + accent pill toggle. The whole row taps; the controller path activates via [onToggle]. */
+/** A label + square ink toggle. The whole row taps; the controller path activates via [onToggle]. */
 @Composable
 internal fun QaToggleRow(label: String, checked: Boolean, onToggle: () -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().clickable { onToggle() },
-    ) {
-        Text(label, color = QaColors.Text, fontSize = 13.sp, modifier = Modifier.weight(1f))
-        QaTogglePill(checked)
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { onToggle() }) {
+        Text(label, style = QaBody, modifier = Modifier.weight(1f))
+        QaToggle(checked)
     }
 }
 
 @Composable
-private fun QaTogglePill(checked: Boolean) {
-    val accent = MaterialTheme.colorScheme.primary
+private fun QaToggle(checked: Boolean) {
     Box(
         modifier = Modifier
-            .width(40.dp)
-            .height(22.dp)
-            .clip(RoundedCornerShape(11.dp))
-            .background(if (checked) accent else QaColors.TrackBg)
-            .padding(2.dp),
+            .width(36.dp)
+            .height(20.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .then(if (checked) Modifier.background(OsdInk) else Modifier.border(1.dp, Hair, RoundedCornerShape(10.dp)))
+            .padding(3.dp),
         contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart,
     ) {
-        Box(Modifier.size(18.dp).clip(CircleShape).background(if (checked) MaterialTheme.colorScheme.onPrimary else QaColors.Muted))
+        Box(Modifier.size(14.dp).clip(RoundedCornerShape(7.dp)).background(if (checked) Color.Black else OsdInk3))
     }
 }
 
 /** A label + −/value/+ stepper. Controller steps via ←/→; the buttons handle touch. */
 @Composable
 internal fun QaStepperRow(label: String, value: String, onStep: (Int) -> Unit) {
-    val accent = MaterialTheme.colorScheme.primary
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Text(label, color = QaColors.Text, fontSize = 13.sp, modifier = Modifier.weight(1f))
+        Text(label, style = QaBody, modifier = Modifier.weight(1f))
         QaStepButton("−") { onStep(-1) }
-        Text(value, color = accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 10.dp))
+        Text(value, style = QaNum, modifier = Modifier.padding(horizontal = 10.dp))
         QaStepButton("+") { onStep(1) }
     }
 }
@@ -217,14 +175,24 @@ internal fun QaStepperRow(label: String, value: String, onStep: (Int) -> Unit) {
 private fun QaStepButton(glyph: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .size(26.dp)
-            .clip(RoundedCornerShape(7.dp))
-            .border(1.dp, QaColors.Outline, RoundedCornerShape(7.dp))
+            .size(30.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .border(1.dp, Hair, RoundedCornerShape(8.dp))
             .clickable { onClick() },
         contentAlignment = Alignment.Center,
     ) {
-        Text(glyph, color = QaColors.Text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(glyph, style = QaBody.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
     }
 }
 
-// Live telemetry values use the shared MeterColors ramp (the same cool→warm→hot the OSD uses).
+/** Section header inside the single column: hairline above, quiet title left, optional status right. */
+@Composable
+internal fun QaGroupHeader(title: String, status: String? = null) {
+    Column(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Hair))
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.Bottom) {
+            Text(title, style = QaLabel, modifier = Modifier.weight(1f))
+            if (status != null) Text(status, style = QaLabel)
+        }
+    }
+}

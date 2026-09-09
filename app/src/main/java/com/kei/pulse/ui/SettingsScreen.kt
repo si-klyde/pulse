@@ -39,14 +39,20 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.layout.height
+import com.kei.pulse.ui.shell.PulseSwitch
+import com.kei.pulse.ui.shell.Seg
+import com.kei.pulse.ui.shell.Chip
+import com.kei.pulse.ui.shell.pulseSliderColors
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -66,7 +72,6 @@ import androidx.compose.ui.unit.dp
 import com.kei.pulse.model.AppColorSource
 import com.kei.pulse.model.OverlayElement
 import com.kei.pulse.model.OverlayPreset
-import com.kei.pulse.model.PulseThemeId
 import com.kei.pulse.model.RgbMode
 import com.kei.pulse.model.RgbStick
 import com.kei.pulse.ui.theme.HudBackground
@@ -75,14 +80,6 @@ import com.kei.pulse.model.PerformanceProfile
 import com.kei.pulse.model.TileInteractionBehavior
 import kotlin.math.roundToInt
 
-private val accentColorOptions = listOf(
-    0xFF3F51B5.toInt(),
-    0xFF006E1C.toInt(),
-    0xFFB3261E.toInt(),
-    0xFF8E24AA.toInt(),
-    0xFF00639A.toInt(),
-    0xFF9A4600.toInt(),
-)
 
 @Composable
 fun SettingsScreen(
@@ -93,7 +90,6 @@ fun SettingsScreen(
     onRgbManualTargetChange: (RgbStick) -> Unit = {},
     onRgbManualStickChange: (RgbStick, Int, Float) -> Unit = { _, _, _ -> },
     onColorSourceChange: (AppColorSource) -> Unit,
-    onThemeChange: (PulseThemeId) -> Unit,
     onAccentColorChange: (Int) -> Unit,
     onTileTapBehaviorChange: (TileInteractionBehavior) -> Unit,
     onApplyLastProfileOnBootChange: (Boolean) -> Unit,
@@ -125,8 +121,20 @@ fun SettingsScreen(
     onSetQuickAccessCombo: () -> Unit = {},
     onClearQuickAccessCombo: () -> Unit = {},
     capturingCombo: Boolean = false,
+    /** Vendor charging controls (RP6): null = not readable yet; the group hides when the device lacks the node. */
+    chargingSupported: Boolean = false,
+    chargingSeparation: Boolean? = null,
+    chargeLimit80: Boolean? = null,
+    onChargingSeparationChange: (Boolean) -> Unit = {},
+    onChargeLimit80Change: (Boolean) -> Unit = {},
+    onChargeWhileScreenOffChange: (Boolean) -> Unit = {},
+    /** Hosted in the rail shell: no page background, no title row. */
+    embedded: Boolean = false,
+    /** When set, only sections whose title is listed render (the rail splits Settings into Overlay / Lights / System). */
+    only: Set<String>? = null,
 ) {
     var showResetConfirmation by remember { mutableStateOf(false) }
+    val show: (String) -> Boolean = { only == null || it in only }
 
     HudBackground(modifier = Modifier.fillMaxSize()) {
     Column(
@@ -134,10 +142,10 @@ fun SettingsScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .navigationBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 28.dp),
+            .padding(horizontal = if (embedded) 24.dp else 20.dp, vertical = if (embedded) 14.dp else 28.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        Row(
+        if (!embedded) Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
@@ -164,7 +172,7 @@ fun SettingsScreen(
             }
         }
 
-        SettingsSection(title = "PULSE") {
+        if (show("PULSE")) SettingsSection(title = "PULSE") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -175,29 +183,24 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        text = if (settings.pulseEnabled) "PULSE is active" else "System in control",
+                        text = if (settings.pulseEnabled) "PULSE is on" else "System in control",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = "Master switch. Turn OFF to hand every control back to manufacturer stock — " +
-                            "uncapped clocks, Smart fan, restored governor/refresh — and fully stop PULSE. " +
-                            "Do this before uninstalling for a clean device.",
+                        text = "Off hands every control back to the manufacturer defaults — uncapped clocks, Smart fan, " +
+                            "stock governor and refresh rate — and stops the background service. Turn it off before uninstalling.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                Switch(
+                PulseSwitch(
                     checked = settings.pulseEnabled,
                     onCheckedChange = onPulseEnabledChange,
                 )
             }
         }
 
-        SettingsSection(title = "Appearance") {
-            ThemeSelector(selected = settings.themeId, onSelect = onThemeChange)
-        }
-
-        SettingsSection(title = "Quick Settings Tile") {
+        if (show("Quick Settings Tile")) SettingsSection(title = "Quick Settings Tile") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -229,7 +232,31 @@ fun SettingsScreen(
             }
         }
 
-        SettingsSection(title = "Startup") {
+        if (show("Charging") && chargingSupported) SettingsSection(title = "Charging") {
+            ChargingRow(
+                title = "Charging separation",
+                caption = "While the screen is on, power comes from the charger and the battery is left alone — cooler and " +
+                    "kinder to the cell. The vendor turns charging back on when the screen goes off.",
+                checked = chargingSeparation,
+                onChange = onChargingSeparationChange,
+            )
+            ChargingRow(
+                title = "Stop at 80 %",
+                caption = "The vendor's charge limit for battery longevity.",
+                checked = chargeLimit80,
+                onChange = onChargeLimit80Change,
+            )
+            ChargingRow(
+                title = "Always charge while the screen is off",
+                caption = "Fixes a vendor bug: after plugging in while asleep, or after low memory, separation can stay on with " +
+                    "the screen off and the battery never charges. PULSE checks once a minute while the screen is off and " +
+                    "re-enables charging if needed. Never touches anything while the screen is on.",
+                checked = settings.chargeWhileScreenOff,
+                onChange = onChargeWhileScreenOffChange,
+            )
+        }
+
+        if (show("Startup")) SettingsSection(title = "Startup") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -240,23 +267,23 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        text = "Apply last profile on device boot",
+                        text = "Re-apply manual clocks after a reboot",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = "When enabled, the app will attempt to restore the last applied profile after boot.",
+                        text = "Puts your last tier or Custom limits back as soon as the device boots, before PULSE is opened. Auto does not need this — it takes over whenever a game is in front.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                Switch(
+                PulseSwitch(
                     checked = settings.applyLastProfileOnBoot,
                     onCheckedChange = onApplyLastProfileOnBootChange,
                 )
             }
         }
 
-        SettingsSection(title = "Sleep") {
+        if (show("Sleep")) SettingsSection(title = "Sleep") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -276,7 +303,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                Switch(
+                PulseSwitch(
                     checked = settings.sleepProfileEnabled,
                     onCheckedChange = onSleepProfileEnabledChange,
                     enabled = sleepProfileOptions.isNotEmpty(),
@@ -299,7 +326,7 @@ fun SettingsScreen(
             }
         }
 
-        SettingsSection(title = "Per-app profiles") {
+        if (show("Per-app profiles")) SettingsSection(title = "Per-app profiles") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -319,7 +346,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                Switch(
+                PulseSwitch(
                     checked = perAppEnabled,
                     onCheckedChange = onPerAppEnabledChange,
                 )
@@ -361,14 +388,14 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                Switch(
+                PulseSwitch(
                     checked = perAppSwitchNotices,
                     onCheckedChange = onPerAppSwitchNoticesChange,
                 )
             }
         }
 
-        SettingsSection(title = "On-screen overlay") {
+        if (show("On-screen overlay")) SettingsSection(title = "On-screen overlay") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -388,7 +415,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                Switch(
+                PulseSwitch(
                     checked = overlayEnabled,
                     onCheckedChange = onOverlayEnabledChange,
                 )
@@ -413,7 +440,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                Switch(
+                PulseSwitch(
                     checked = settings.quickAccessEnabled,
                     onCheckedChange = onQuickAccessChange,
                 )
@@ -438,7 +465,7 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Switch(
+                    PulseSwitch(
                         checked = settings.quickAccessShowHandle,
                         onCheckedChange = onQuickAccessShowHandleChange,
                     )
@@ -469,11 +496,7 @@ fun SettingsScreen(
             SettingsControlGroup(label = "Layout · density + quick-fill") {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OverlayPreset.entries.forEach { preset ->
-                        FilterChip(
-                            selected = overlayPreset == preset,
-                            onClick = { onOverlayPresetChange(preset) },
-                            label = { Text(preset.label) },
-                        )
+                        Chip(preset.label, overlayPreset == preset) { onOverlayPresetChange(preset) }
                     }
                 }
             }
@@ -495,6 +518,7 @@ fun SettingsScreen(
             }
             SettingsControlGroup(label = "Opacity · $overlayOpacity%") {
                 Slider(
+                    colors = pulseSliderColors(),
                     value = overlayOpacity.toFloat(),
                     onValueChange = { onOverlayOpacityChange(it.roundToInt()) },
                     valueRange = 40f..100f,
@@ -502,7 +526,7 @@ fun SettingsScreen(
             }
         }
 
-        SettingsSection(title = "Joystick RGB") {
+        if (show("Joystick RGB")) SettingsSection(title = "Joystick RGB") {
             Text(
                 text = "Color the controller's joystick LEDs. Battery and Heat glow with device status; " +
                     "Manual sets your own color per stick. Turn the lights on in your system settings to see them.",
@@ -511,11 +535,7 @@ fun SettingsScreen(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 RgbMode.entries.forEach { mode ->
-                    FilterChip(
-                        selected = settings.rgbMode == mode,
-                        onClick = { onRgbModeChange(mode) },
-                        label = { Text(mode.label) },
-                    )
+                    Chip(mode.label, settings.rgbMode == mode) { onRgbModeChange(mode) }
                 }
             }
             if (settings.rgbMode == RgbMode.MANUAL) {
@@ -527,7 +547,7 @@ fun SettingsScreen(
             }
         }
 
-        SettingsSection(title = "Profiles") {
+        if (show("Profiles")) SettingsSection(title = "Profiles") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -584,20 +604,20 @@ fun SettingsScreen(
                 }
             }
         }
-        SettingsSection(title = "About") {
+        if (show("About")) SettingsSection(title = "About") {
             Text(
-                text = "P.U.L.S.E.",
+                text = "PULSE",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
             )
             Text(
-                text = "Performance Utility for Load and System Efficiency",
+                text = "No-root CPU, GPU, fan and lighting control for the Retroid Pocket 6, AYN Odin 3 and AYN Thor. " +
+                    "Uses the device's own PServer service; never asks for root.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = "No-root CPU + GPU control for AYN Odin 3, AYN Thor and Retroid Pocket 6.",
+                text = "Fork of PULSE 1.19.6 by keiretrogaming · GPL v2 · credits in NOTICE.md",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -677,159 +697,21 @@ private fun SleepProfileSelector(
     }
 }
 
-@Composable
-private fun ThemeModeSelector(
-    selected: AppColorSource,
-    onChange: (AppColorSource) -> Unit,
-    selectedAccentColor: Int,
-    onAccentColorChange: (Int) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        ThemeModeOption(
-            title = "System colors",
-            selected = selected == AppColorSource.SYSTEM,
-            onClick = { onChange(AppColorSource.SYSTEM) },
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            RadioButton(
-                selected = selected == AppColorSource.CUSTOM_ACCENT,
-                onClick = { onChange(AppColorSource.CUSTOM_ACCENT) },
-            )
-            Text(
-                text = "Custom",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(start = 8.dp),
-            )
-            Row(
-                modifier = Modifier.padding(start = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                accentColorOptions.forEach { accentColor ->
-                    AccentSwatch(
-                        color = Color(accentColor),
-                        selected = selectedAccentColor == accentColor,
-                        onClick = {
-                            onChange(AppColorSource.CUSTOM_ACCENT)
-                            onAccentColorChange(accentColor)
-                        },
-                    )
-                }
-            }
-        }
-    }
-}
 
-@Composable
-private fun ThemeModeOption(
-    title: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(
-            selected = selected,
-            onClick = onClick,
-        )
-        Column(
-            modifier = Modifier
-                .padding(start = 8.dp)
-                .weight(1f),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
-}
 
-@Composable
-private fun AccentSwatch(
-    color: Color,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .size(28.dp)
-            .background(color, CircleShape)
-            .border(
-                width = if (selected) 3.dp else 1.dp,
-                color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline,
-                shape = CircleShape,
-            )
-            .clickable(onClick = onClick),
-    )
-}
 
 @Composable
 private fun TileBehaviorSelector(
     selected: TileInteractionBehavior,
     onChange: (TileInteractionBehavior) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        TileBehaviorOption(
-            title = "Quick settings dialog",
-            selected = selected == TileInteractionBehavior.SHOW_DIALOG,
-            onClick = { onChange(TileInteractionBehavior.SHOW_DIALOG) },
-            modifier = Modifier.weight(1f),
-        )
-        TileBehaviorOption(
-            title = "Cycle profiles",
-            selected = selected == TileInteractionBehavior.CYCLE_PROFILES,
-            onClick = { onChange(TileInteractionBehavior.CYCLE_PROFILES) },
-            modifier = Modifier.weight(1f),
-        )
-        TileBehaviorOption(
-            title = "Open app",
-            selected = selected == TileInteractionBehavior.OPEN_APP,
-            onClick = { onChange(TileInteractionBehavior.OPEN_APP) },
-            modifier = Modifier.weight(1f),
-        )
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Seg("Quick dialog", selected == TileInteractionBehavior.SHOW_DIALOG, { onChange(TileInteractionBehavior.SHOW_DIALOG) }, height = 40)
+        Seg("Cycle profiles", selected == TileInteractionBehavior.CYCLE_PROFILES, { onChange(TileInteractionBehavior.CYCLE_PROFILES) }, height = 40)
+        Seg("Open app", selected == TileInteractionBehavior.OPEN_APP, { onChange(TileInteractionBehavior.OPEN_APP) }, height = 40)
     }
 }
 
-@Composable
-private fun TileBehaviorOption(
-    title: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(
-            selected = selected,
-            onClick = onClick,
-        )
-        Column(
-            modifier = Modifier
-                .padding(start = 4.dp)
-                .weight(1f),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
-}
 
 @Composable
 private fun ManualRgbControls(
@@ -863,11 +745,7 @@ private fun ManualRgbControls(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 RgbStick.entries.forEach { stick ->
-                    FilterChip(
-                        selected = target == stick,
-                        onClick = { onTargetChange(stick) },
-                        label = { Text(stick.label) },
-                    )
+                    Chip(stick.label, target == stick) { onTargetChange(stick) }
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -875,10 +753,8 @@ private fun ManualRgbControls(
                 ManualStickSwatch("R", settings.rgbManualRightColor, settings.rgbManualRightBrightness)
             }
         }
-        // Right — the wordmark picker, fixed width, flush to the right edge
         Column(
-            modifier = Modifier.width(380.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.width(360.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             PulseColorPicker(
@@ -889,22 +765,6 @@ private fun ManualRgbControls(
                 onBrightness = { bright = it },
                 onCommit = { commit() },
             )
-            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-                Text(
-                    text = "color",
-                    modifier = Modifier.weight(17f),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = "brightness",
-                    modifier = Modifier.weight(12f),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
     }
 }
@@ -941,6 +801,11 @@ private val PULSE_GLYPHS = listOf(
  * brightness ramp in the chosen hue — drag up/down to choose brightness. Equalizer bars above and below pulse.
  * Left ~3/5 (x < split) edits colour by x; right ~2/5 edits brightness by y. Commits on release.
  */
+/**
+ * Two strips: hue (full spectrum) and brightness (black → the chosen hue). Tap or drag sets the value live;
+ * the colour is committed to the sticks when the finger lifts. Square thumbs, hairline frames — same vocabulary
+ * as every other control.
+ */
 @Composable
 private fun PulseColorPicker(
     hue: Float,
@@ -950,100 +815,67 @@ private fun PulseColorPicker(
     onCommit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // pointerInput(Unit) runs once and captures these — keep them fresh so switching sticks isn't ignored.
     val latestOnHue = rememberUpdatedState(onHue)
     val latestOnBrightness = rememberUpdatedState(onBrightness)
     val latestOnCommit = rememberUpdatedState(onCommit)
-    val barAlpha by rememberInfiniteTransition(label = "bars").animateFloat(
-        initialValue = 0.4f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(animation = tween(1300, easing = LinearEasing), repeatMode = RepeatMode.Reverse),
-        label = "barAlpha",
-    )
-    Canvas(
-        modifier = modifier
-            .aspectRatio(2.4f)
-            .pointerInput(Unit) {
-                // One low-level gesture that CONSUMES from touch-down, so the parent vertical scroll can't steal
-                // the drag (the old tap+drag detectors fought the scroll and froze). Handles tap and drag alike.
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    down.consume()
-                    pickFromPosition(down.position, size.width.toFloat(), size.height.toFloat(), latestOnHue.value, latestOnBrightness.value)
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                        if (!change.pressed) break
-                        change.consume()
-                        pickFromPosition(change.position, size.width.toFloat(), size.height.toFloat(), latestOnHue.value, latestOnBrightness.value)
-                    }
-                    latestOnCommit.value()
-                }
-            },
-    ) {
-        val w = size.width
-        val h = size.height
-        val px = w * 0.04f
-        val b = (w - px * 2f) / 29f
-        val topOff = (h - 12.6f * b) / 2f
-        val barH = 1.6f * b
-        val letterY0 = topOff + 2.4f * b
-        val letterH = 7f * b
-        val barBotY = topOff + 10.2f * b
-        val segGap = b * 0.3f
-
-        fun bars(y: Float) {
-            val cz = listOf(Color(0xFFE23B86), Color(0xFF2BD07A), Color(0xFF5B7CFF), Color(0xFFB56CFF))
-            val czSeg = (17f * b - 3 * segGap) / 4f
-            for (k in 0..3) drawRect(cz[k].copy(alpha = barAlpha), Offset(px + k * (czSeg + segGap), y), Size(czSeg, barH))
-            val bzStart = px + 18f * b
-            val bz = listOf(Color(0xFFCFD6E6), Color(0xFF9AA3B8), Color(0xFF5B6478))
-            val bzSeg = (11f * b - 2 * segGap) / 3f
-            for (k in 0..2) drawRect(bz[k].copy(alpha = barAlpha), Offset(bzStart + k * (bzSeg + segGap), y), Size(bzSeg, barH))
-        }
-        bars(topOff)
-        bars(barBotY)
-
-        val blk = b * 0.84f
-        for (i in 0..4) {
-            val glyph = PULSE_GLYPHS[i]
-            val lx = px + i * 6f * b
-            for (r in 0..6) for (c in 0..4) {
-                if (glyph[r][c] != '1') continue
-                val fill = if (i < 3) {
-                    Color(android.graphics.Color.HSVToColor(floatArrayOf((i * 5 + c) / 14f * 360f, 0.85f, 1f)))
-                } else {
-                    Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, 0.85f, (1f - r / 6f).coerceIn(0.08f, 1f))))
-                }
-                drawRect(fill, Offset(lx + c * b, letterY0 + r * b), Size(blk, blk))
-            }
-        }
-
-        val cw = 3.dp.toPx()
-        // Hue cursor — vertical line over the P-U-L spectrum.
-        val hx = px + (hue / 360f).coerceIn(0f, 1f) * 17f * b
-        drawRect(Color.Black.copy(alpha = 0.5f), Offset(hx - cw, letterY0 - b * 0.4f), Size(cw * 2.2f, letterH + b * 0.8f))
-        drawRect(Color.White, Offset(hx - cw / 2f, letterY0 - b * 0.4f), Size(cw, letterH + b * 0.8f))
-        // Brightness cursor — horizontal line over the S-E ramp.
-        val seL = px + 18f * b
-        val seR = px + 29f * b
-        val by = letterY0 + (1f - brightness.coerceIn(0f, 1f)) * letterH
-        drawRect(Color.Black.copy(alpha = 0.5f), Offset(seL, by - cw), Size(seR - seL, cw * 2.2f))
-        drawRect(Color.White, Offset(seL, by - cw / 2f), Size(seR - seL, cw))
+    val hueColors = remember { (0..12).map { Color(android.graphics.Color.HSVToColor(floatArrayOf(it * 30f, 1f, 1f))) } }
+    val chosen = Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, 1f, 1f)))
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        PickerStrip(
+            label = "Colour",
+            fraction = hue / 360f,
+            brush = Brush.horizontalGradient(hueColors),
+            onFraction = { latestOnHue.value(it * 360f) },
+            onRelease = { latestOnCommit.value() },
+        )
+        PickerStrip(
+            label = "Brightness",
+            fraction = brightness,
+            brush = Brush.horizontalGradient(listOf(Color.Black, chosen)),
+            onFraction = { latestOnBrightness.value(it) },
+            onRelease = { latestOnCommit.value() },
+        )
     }
 }
 
-/** Map a touch position to hue (left zone, by x) or brightness (right zone, by y), matching the draw geometry. */
-private fun pickFromPosition(pos: Offset, w: Float, h: Float, onHue: (Float) -> Unit, onBrightness: (Float) -> Unit) {
-    val px = w * 0.04f
-    val b = (w - px * 2f) / 29f
-    val splitX = px + 17.5f * b
-    val letterY0 = (h - 12.6f * b) / 2f + 2.4f * b
-    val letterH = 7f * b
-    if (pos.x < splitX) {
-        onHue(((pos.x - px) / (17f * b)).coerceIn(0f, 1f) * 360f)
-    } else {
-        onBrightness((1f - (pos.y - letterY0) / letterH).coerceIn(0f, 1f))
+@Composable
+private fun PickerStrip(label: String, fraction: Float, brush: Brush, onFraction: (Float) -> Unit, onRelease: () -> Unit) {
+    val onFractionState = rememberUpdatedState(onFraction)
+    val onReleaseState = rememberUpdatedState(onRelease)
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(28.dp)
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = { p -> onFractionState.value((p.x / size.width).coerceIn(0f, 1f)); onReleaseState.value() })
+                }
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDrag = { change, _ -> change.consume(); onFractionState.value((change.position.x / size.width).coerceIn(0f, 1f)) },
+                        onDragEnd = { onReleaseState.value() },
+                        onDragCancel = { onReleaseState.value() },
+                    )
+                },
+        ) {
+            Box(Modifier.fillMaxSize().padding(vertical = 8.dp).background(brush).border(1.dp, MaterialTheme.colorScheme.outline))
+            // Thumb: 12×28 square, ink with a black inset so it reads over any hue.
+            Box(
+                Modifier
+                    .fillMaxWidth(fraction.coerceIn(0f, 1f))
+                    .fillMaxSize(),
+            ) {
+                Box(
+                    Modifier
+                        .align(Alignment.CenterEnd)
+                        .width(12.dp)
+                        .fillMaxHeight()
+                        .background(MaterialTheme.colorScheme.onSurface)
+                        .border(2.dp, MaterialTheme.colorScheme.surface),
+                )
+            }
+        }
     }
 }
 
@@ -1120,7 +952,7 @@ private fun OverlayItemGroup(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
-            text = title.uppercase(),
+            text = title,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -1130,18 +962,24 @@ private fun OverlayItemGroup(
         ) {
             items.forEach { (element, label) ->
                 val isOn = element in selected
-                FilterChip(
-                    selected = isOn,
-                    onClick = { onToggle(element, !isOn) },
-                    label = { Text(label) },
-                    leadingIcon = if (isOn) {
-                        { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                    } else {
-                        null
-                    },
-                )
+                Chip(label, isOn) { onToggle(element, !isOn) }
             }
         }
+    }
+}
+
+@Composable
+private fun ChargingRow(title: String, caption: String, checked: Boolean?, onChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top,
+    ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text = title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(text = caption, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        PulseSwitch(checked = checked ?: false, onCheckedChange = onChange, enabled = checked != null)
     }
 }
 
@@ -1150,60 +988,20 @@ private fun SettingsSection(
     title: String,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.medium),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f),
-        ),
-    ) {
+    // Flat group, not a card: a hairline above, the title as a quiet label, then the rows.
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outlineVariant))
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
-                text = title.uppercase(),
+                text = title,
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             content()
         }
     }
 }
 
-@Composable
-private fun ThemeSelector(
-    selected: PulseThemeId,
-    onSelect: (PulseThemeId) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        PulseThemeId.entries.forEach { theme ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onSelect(theme) }
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                RadioButton(selected = selected == theme, onClick = { onSelect(theme) })
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = theme.label,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = theme.tagline,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-    }
-}

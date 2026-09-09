@@ -13,6 +13,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,6 +25,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.kei.pulse.appwatch.ForegroundAppMonitorService
+import com.kei.pulse.appwatch.WatcherActivation
 import com.kei.pulse.overlay.PerformanceOverlay
 import com.kei.pulse.sleep.SleepProfileMonitorService
 import com.kei.pulse.tile.QuickSettingsTileAddResult
@@ -30,12 +33,15 @@ import com.kei.pulse.tile.QuickSettingsTilePrompt
 import com.kei.pulse.tile.QuickSettingsTileRefresher
 import com.kei.pulse.ui.FanCurveEditorBindings
 import com.kei.pulse.ui.MainTunerScreen
+import com.kei.pulse.ui.ScreenNotifications
 import com.kei.pulse.ui.PerAppScreen
 import com.kei.pulse.ui.SettingsScreen
 import com.kei.pulse.ui.TunerViewModel
-import com.kei.pulse.ui.theme.LocalThermalHeat
 import com.kei.pulse.ui.theme.PulseTheme
-import com.kei.pulse.ui.theme.heatForTier
+import com.kei.pulse.ui.shell.RailShell
+import com.kei.pulse.ui.shell.Section
+import com.kei.pulse.ui.sections.PowerSection
+import com.kei.pulse.ui.sections.FanSection
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -110,29 +116,87 @@ class MainActivity : ComponentActivity() {
                     val autoTdpAggressivePark = viewModel.autoTdpAggressivePark.collectAsStateWithLifecycle().value
                     val autoTdpBias = viewModel.autoTdpBias.collectAsStateWithLifecycle().value
                     val estimatedPeakW = viewModel.estimatedPeakW.collectAsStateWithLifecycle().value
-                    var showSettings by rememberSaveable { mutableStateOf(false) }
-                    var showPerApps by rememberSaveable { mutableStateOf(false) }
+                    var sectionOrdinal by rememberSaveable { mutableStateOf(Section.POWER.ordinal) }
+                    val section = Section.entries[sectionOrdinal]
+                    val telemetry = viewModel.telemetry.collectAsStateWithLifecycle().value
+                    val recap = viewModel.recap.collectAsStateWithLifecycle().value
+                    // Vendor charging keys are ordinary Settings.System values — poll them while the screen is up.
+                    val chargingKeys = androidx.compose.runtime.produceState<Pair<Boolean?, Boolean?>>(initialValue = null to null) {
+                        while (true) {
+                            fun key(k: String): Boolean? = runCatching { android.provider.Settings.System.getInt(contentResolver, k) == 1 }.getOrNull()
+                            value = key(com.kei.pulse.data.ChargingController.KEY_SEPARATION) to key(com.kei.pulse.data.ChargingController.KEY_LIMIT_80)
+                            kotlinx.coroutines.delay(2_000)
+                        }
+                    }.value
+                    val chargingSupported = androidx.compose.runtime.produceState(initialValue = false) {
+                        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.kei.pulse.data.ChargingController().isSupported() }
+                    }.value
+                    val plugged = remember(telemetry) { com.kei.pulse.data.PowerSource.isPlugged(this@MainActivity) }
+                    LaunchedEffect(Unit) {
+                        if (com.kei.pulse.data.SessionFeed.current.value == null) {
+                            com.kei.pulse.data.SessionStore(this@MainActivity).load()?.let { com.kei.pulse.data.SessionFeed.publish(if (it.isLive) it.ended(it.startedAtMs + it.durationMs) else it) }
+                        }
+                    }
+                    val fanDuty = viewModel.fanDuty.collectAsStateWithLifecycle().value
+                    val fanEditor = if (customFanSupported) {
+                        FanCurveEditorBindings(
+                            curve = settings.fanCurve,
+                            responseStep = settings.fanResponseStep,
+                            bias = settings.fanBias,
+                            smartEnabled = settings.fanSmartEnabled,
+                            targetTempC = settings.fanTargetTempC,
+                            calibrating = fanCalibrating,
+                            onCurveChange = ::onFanCurveChanged,
+                            onResponseStepChange = ::onFanResponseStepChanged,
+                            onBiasChange = ::onFanBiasChanged,
+                            onSmartToggle = ::onFanSmartToggled,
+                            onTargetTempChange = ::onFanTargetTempChanged,
+                            onAutocalibrate = ::onAutocalibrateFan,
+                            readTelemetry = viewModel::readTelemetry,
+                            readFanDutyPercent = viewModel::readFanDutyPercent,
+                        )
+                    } else {
+                        null
+                    }
                     val perAppEnabled = viewModel.perAppEnabled.collectAsStateWithLifecycle().value
                     val perAppConfigs = viewModel.perAppConfigs.collectAsStateWithLifecycle().value
                     val perAppSwitchNotices = viewModel.perAppSwitchNotices.collectAsStateWithLifecycle().value
 
                     // Existing per-app bindings must engage on launch even if the master toggle was never
                     // flipped — the watcher self-stops if nothing needs it. (Per-app comes first.)
-                    LaunchedEffect(perAppConfigs.isNotEmpty()) {
-                        if (perAppConfigs.isNotEmpty() &&
-                            ForegroundAppMonitorService.hasUsageAccess(this@MainActivity)
-                        ) {
-                            ForegroundAppMonitorService.start(this@MainActivity)
-                        }
+                    // Same rule as the boot / package-replaced receiver: if anything needs the watcher (overlay,
+                    // quick access, AutoTDP, per-game rules, global fan/RGB), make sure it is running whenever the
+                    // app opens. A force-stop (or an install over the top) kills the service and drops the
+                    // package-replaced broadcast, so launch is the one moment left to bring it back.
+                    LaunchedEffect(settings, perAppEnabled, perAppConfigs.isNotEmpty()) {
+                        val shouldRun = settings.pulseEnabled && WatcherActivation.shouldRun(
+                            perAppEnabled = perAppEnabled,
+                            hasPerAppConfigs = perAppConfigs.isNotEmpty(),
+                            settings = settings,
+                            hasUsageAccess = ForegroundAppMonitorService.hasUsageAccess(this@MainActivity),
+                        )
+                        if (shouldRun) ForegroundAppMonitorService.start(this@MainActivity)
                     }
 
                     // System / controller back navigates out of sub-screens instead of exiting.
-                    BackHandler(enabled = showPerApps || showSettings) {
-                        if (showPerApps) showPerApps = false else showSettings = false
-                    }
+                    BackHandler(enabled = section != Section.POWER) { sectionOrdinal = Section.POWER.ordinal }
 
-                    CompositionLocalProvider(LocalThermalHeat provides heatForTier(activeTier)) {
-                    if (showPerApps) {
+                    ScreenNotifications(state = state, onStatusMessageShown = viewModel::consumeStatusMessage, onErrorMessageShown = viewModel::consumeErrorMessage)
+                    LaunchedEffect(Unit) { viewModel.refreshSystemControls() }
+                    RailShell(
+                        section = section,
+                        onSelectSection = { sectionOrdinal = it.ordinal },
+                        statusLine1 = if (state.isPServerAvailable) "On · linked, no root" else "PServer unavailable",
+                        statusLine2 = if (autoTdpEnabled) "Auto · holding $autoTdpFpsTarget fps" else "Manual · ${activeTier.label}",
+                        session = recap,
+                        telemetry = telemetry,
+                        policies = state.policies,
+                        fanPercent = fanDuty,
+                        batteryTimeLeft = null,
+                        plugged = plugged,
+                    ) {
+                    when (section) {
+                    Section.PER_GAME -> {
                         PerAppScreen(
                             configs = perAppConfigs,
                             learnedPackages = viewModel.autoTdpLearnedPackages.collectAsStateWithLifecycle().value,
@@ -143,18 +207,31 @@ class MainActivity : ComponentActivity() {
                             defaultAggressivePark = autoTdpAggressivePark,
                             onSaveConfig = ::onSavePerAppConfig,
                             onRemoveConfig = viewModel::removePerAppConfig,
-                            onBack = { showPerApps = false },
+                            embedded = true,
+                            onBack = { sectionOrdinal = Section.POWER.ordinal },
                         )
-                    } else if (showSettings) {
+                    }
+                    Section.OVERLAY, Section.LIGHTS, Section.SYSTEM -> {
                         SettingsScreen(
+                            embedded = true,
+                            only = when (section) {
+                                Section.OVERLAY -> setOf("On-screen overlay")
+                                Section.LIGHTS -> setOf("Joystick RGB")
+                                else -> setOf("PULSE", "Charging", "Quick Settings Tile", "Startup", "Sleep", "Per-app profiles", "Profiles", "About")
+                            },
+                            chargingSupported = chargingSupported,
+                            chargingSeparation = chargingKeys.first,
+                            chargeLimit80 = chargingKeys.second,
+                            onChargingSeparationChange = { on -> lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) { com.kei.pulse.data.ChargingController().setSeparation(on) } },
+                            onChargeLimit80Change = { on -> lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) { com.kei.pulse.data.ChargingController().setChargeLimit80(on) } },
+                            onChargeWhileScreenOffChange = viewModel::setChargeWhileScreenOff,
                             settings = settings,
-                            onBack = { showSettings = false },
+                            onBack = { sectionOrdinal = Section.POWER.ordinal },
                             onPulseEnabledChange = ::onPulseMasterToggle,
                             onRgbModeChange = ::onRgbModeSelected,
                             onRgbManualTargetChange = viewModel::setRgbManualTarget,
                             onRgbManualStickChange = ::onRgbManualStickChanged,
                             onColorSourceChange = viewModel::setColorSource,
-                            onThemeChange = viewModel::setThemeId,
                             onAccentColorChange = viewModel::setAccentColor,
                             onTileTapBehaviorChange = { behavior ->
                                 viewModel.setTileTapBehavior(behavior) {
@@ -190,7 +267,7 @@ class MainActivity : ComponentActivity() {
                             perAppEnabled = perAppEnabled,
                             perAppConfiguredCount = perAppConfigs.size,
                             onPerAppEnabledChange = ::setPerAppProfilesEnabled,
-                            onOpenPerApps = { showPerApps = true },
+                            onOpenPerApps = { sectionOrdinal = Section.PER_GAME.ordinal },
                             perAppSwitchNotices = perAppSwitchNotices,
                             onPerAppSwitchNoticesChange = viewModel::setPerAppSwitchNotices,
                             overlayEnabled = settings.overlayEnabled,
@@ -207,8 +284,22 @@ class MainActivity : ComponentActivity() {
                             onClearQuickAccessCombo = viewModel::clearQuickAccessCombo,
                             capturingCombo = viewModel.capturingCombo.collectAsStateWithLifecycle().value,
                         )
-                    } else {
+                    }
+                    Section.FAN -> {
+                        FanSection(
+                            currentMode = fanMode,
+                            onSelectMode = ::onFanModeSelected,
+                            editor = fanEditor,
+                            autoOn = autoTdpEnabled,
+                            liveDutyPercent = fanDuty,
+                        )
+                    }
+                    Section.POWER -> {
+                        val hostManual = true
+                        val tuner: @Composable () -> Unit = {
                         MainTunerScreen(
+                            embedded = true,
+                            hideAutoTdp = hostManual,
                             state = state,
                             sleepProfileId = settings.sleepProfileId.takeIf { settings.sleepProfileEnabled },
                             onApplyProfile = viewModel::applyProfile,
@@ -221,33 +312,14 @@ class MainActivity : ComponentActivity() {
                             onUpdateProfile = viewModel::updateProfile,
                             onDeleteProfile = viewModel::deleteProfile,
                             onMoveProfile = viewModel::moveProfile,
-                            onOpenSettings = { showSettings = true },
+                            onOpenSettings = { sectionOrdinal = Section.SYSTEM.ordinal },
                             onRefreshLiveValues = viewModel::refreshLiveState,
                             estimatedPeakW = estimatedPeakW,
                             onStatusMessageShown = viewModel::consumeStatusMessage,
                             onErrorMessageShown = viewModel::consumeErrorMessage,
                             activeTier = activeTier,
                             fanMode = fanMode,
-                            fanCurveEditor = if (customFanSupported) {
-                                FanCurveEditorBindings(
-                                    curve = settings.fanCurve,
-                                    responseStep = settings.fanResponseStep,
-                                    bias = settings.fanBias,
-                                    smartEnabled = settings.fanSmartEnabled,
-                                    targetTempC = settings.fanTargetTempC,
-                                    calibrating = fanCalibrating,
-                                    onCurveChange = ::onFanCurveChanged,
-                                    onResponseStepChange = ::onFanResponseStepChanged,
-                                    onBiasChange = ::onFanBiasChanged,
-                                    onSmartToggle = ::onFanSmartToggled,
-                                    onTargetTempChange = ::onFanTargetTempChanged,
-                                    onAutocalibrate = ::onAutocalibrateFan,
-                                    readTelemetry = viewModel::readTelemetry,
-                                    readFanDutyPercent = viewModel::readFanDutyPercent,
-                                )
-                            } else {
-                                null
-                            },
+                            fanCurveEditor = fanEditor,
                             nativeDisplay = nativeDisplay,
                             resolutionScale = resolutionScale,
                             onSelectTier = { tier ->
@@ -289,6 +361,35 @@ class MainActivity : ComponentActivity() {
                             autoTdpBias = autoTdpBias,
                             onAutoTdpBiasChange = viewModel::setAutoTdpBias,
                         )
+                        }
+                        if (hostManual) {
+                            PowerSection(
+                                autoOn = autoTdpEnabled,
+                                onAutoChange = ::setAutoTdpDefaultEnabled,
+                                fpsTarget = autoTdpFpsTarget,
+                                fpsOptions = viewModel.autoTdpFpsOptions,
+                                onFpsTargetChange = viewModel::setAutoTdpFpsTarget,
+                                bias = autoTdpBias,
+                                onBiasChange = viewModel::setAutoTdpBias,
+                                aggressivePark = autoTdpAggressivePark,
+                                onAggressiveParkChange = viewModel::setAutoTdpAggressivePark,
+                                showWattCaps = viewModel.autoTdpShowWattCaps,
+                                displaySummary = listOfNotNull(
+                                    if (resolutionScale == 100) "native" else "$resolutionScale %",
+                                    refreshRate?.let { "$it Hz" },
+                                ).joinToString(" · "),
+                                fanSummary = com.kei.pulse.data.FanController.labelFor(fanMode),
+                                perGameCount = perAppConfigs.size,
+                                refreshRate = refreshRate,
+                                refreshRates = com.kei.pulse.data.RefreshRateController.RATES,
+                                onSelectRefreshRate = viewModel::setRefreshRate,
+                                compatible = state.isPServerAvailable || state.isLoading,
+                                manualContent = tuner,
+                            )
+                        } else {
+                            tuner()
+                        }
+                    }
                     }
                     }
                 }

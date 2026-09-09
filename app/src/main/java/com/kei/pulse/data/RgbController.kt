@@ -3,6 +3,7 @@ package com.kei.pulse.data
 import android.content.Context
 import android.content.SharedPreferences
 import com.kei.pulse.root.RootSupport
+import com.kei.pulse.root.shellQuote
 
 /**
  * RGB joystick-LED control for AYN / Retroid handhelds.
@@ -75,8 +76,8 @@ class RgbController(context: Context? = null) {
             return
         }
         // Genuine pre-PULSE state (first use, or the user changed it while PULSE was off) — THIS is the original.
-        savedColor = current
-        savedBrightness = RootSupport.runRootCommand("settings get system $KEY_BRIGHTNESS")?.trim()?.takeIf { it != "null" }
+        savedColor = current?.takeIf(::isColorPair)
+        savedBrightness = RootSupport.runRootCommand("settings get system $KEY_BRIGHTNESS")?.trim()?.takeIf(::isBrightness)
         prefs?.edit()
             ?.putBoolean(PREF_DONE, true)
             ?.putString(PREF_ORIG_COLOR, savedColor)
@@ -120,7 +121,7 @@ class RgbController(context: Context? = null) {
         // continuously rewrites the key), without flicker-fighting it every tick. A change always writes now.
         if (colorPair == lastWritten && now - lastWriteMs < REASSERT_MS) return
         // Single-quote the color: it starts with '#', which the shell would otherwise treat as a comment.
-        RootSupport.runRootCommand("settings put system $KEY_COLOR '$colorPair'")
+        RootSupport.runRootCommand("settings put system $KEY_COLOR ${shellQuote(colorPair)}")
         lastWritten = colorPair
         lastWriteMs = now
         // Remember PULSE's own write so a later captureOriginal can tell its leftover from the user's color.
@@ -139,9 +140,11 @@ class RgbController(context: Context? = null) {
             savedColor = prefs.getString(PREF_ORIG_COLOR, null)
             savedBrightness = prefs.getString(PREF_ORIG_BRIGHT, null)
         }
+        // These values came from `settings get` (any WRITE_SETTINGS app can plant them) or from prefs, and they
+        // are echoed into a ROOT shell — so whitelist the shape and quote, never interpolate raw.
         val cmds = buildList {
-            savedColor?.let { add("settings put system $KEY_COLOR '$it'") }
-            savedBrightness?.let { add("settings put system $KEY_BRIGHTNESS '$it'") }
+            savedColor?.takeIf(::isColorPair)?.let { add("settings put system $KEY_COLOR ${shellQuote(it)}") }
+            savedBrightness?.takeIf(::isBrightness)?.let { add("settings put system $KEY_BRIGHTNESS ${shellQuote(it)}") }
         }
         if (cmds.isNotEmpty()) RootSupport.runRootCommand(cmds.joinToString("; "))
         android.util.Log.d(TAG, "off → color=${savedColor ?: "—"} bright=${savedBrightness ?: "—"}")
@@ -160,6 +163,12 @@ class RgbController(context: Context? = null) {
         private const val PREF_ORIG_COLOR = "orig_color"
         private const val PREF_ORIG_BRIGHT = "orig_brightness"
         private const val PREF_LAST = "pulse_last_color"
+
+        // Vendor value shapes: "#AARRGGBB[,#AARRGGBB]" and a 0..1 float. Anything else is not ours to restore.
+        private val COLOR_PAIR = Regex("^#[0-9a-fA-F]{6,8}(,#[0-9a-fA-F]{6,8})?$")
+        private val BRIGHTNESS = Regex("^(0|1|0?\\.[0-9]+|1\\.0+)$")
+        private fun isColorPair(v: String) = COLOR_PAIR.matches(v)
+        private fun isBrightness(v: String) = BRIGHTNESS.matches(v)
 
         /** Re-assert an unchanged color at least this often, to recover from the stock effect overriding us. */
         private const val REASSERT_MS = 8_000L

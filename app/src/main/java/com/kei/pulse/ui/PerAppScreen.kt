@@ -25,6 +25,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.background
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -70,6 +76,8 @@ fun PerAppScreen(
     onSaveConfig: (PerAppConfig) -> Unit,
     onRemoveConfig: (String) -> Unit,
     onBack: () -> Unit,
+    /** Hosted in the rail shell: no page background, no title row. */
+    embedded: Boolean = false,
 ) {
     val context = LocalContext.current
     var apps by remember { mutableStateOf<List<InstalledApp>?>(null) }
@@ -106,10 +114,10 @@ fun PerAppScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 28.dp),
+                .padding(horizontal = if (embedded) 24.dp else 20.dp, vertical = if (embedded) 14.dp else 28.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Row(
+            if (!embedded) Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
@@ -153,7 +161,12 @@ fun PerAppScreen(
                     loaded.filter { it.label.contains(query, ignoreCase = true) }
                 }
                 val sorted = filtered.sortedByDescending { configsByPackage.containsKey(it.packageName) }
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Games with their own rules win over Power while they are in front. Tap a game to set or change them.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(0.dp)) {
                     items(sorted, key = { it.packageName }) { app ->
                         val rowConfig = configsByPackage[app.packageName]
                         PerAppRow(
@@ -197,20 +210,22 @@ fun PerAppScreen(
 }
 
 private fun bindingSummary(config: PerAppConfig?, profiles: List<PerformanceProfile>): String {
-    if (config == null) return "Not configured"
+    if (config == null) return "Follows Power"
     val parts = mutableListOf<String>()
     when {
         config.profileBinding == null -> {}
-        PerAppConfig.isAuto(config.profileBinding) ->
-            parts += "AutoTDP" + (config.fpsTarget?.let { " ${PerAppConfig.fpsTargetLabel(it)}fps" } ?: "") +
-                when (config.aggressivePark) { true -> " · Park"; false -> " · No-park"; null -> "" }
-        else -> PerAppConfig.tierFromBinding(config.profileBinding)?.let { parts += it.label }
-            ?: run { parts += profiles.firstOrNull { it.id == config.profileBinding }?.name ?: "Saved profile" }
+        PerAppConfig.isAutoOff(config.profileBinding) -> parts += "Off · runs stock"
+        PerAppConfig.isAuto(config.profileBinding) -> {
+            parts += "Auto" + (config.fpsTarget?.let { " · hold ${PerAppConfig.fpsTargetLabel(it)}" } ?: "")
+            config.bias?.let { parts += it.label }
+            if (config.aggressivePark == true) parts += "aggressive park"
+        }
+        else -> PerAppConfig.tierFromBinding(config.profileBinding)?.let { parts += "Manual · ${it.label} tier" }
+            ?: run { parts += "Manual · ${profiles.firstOrNull { it.id == config.profileBinding }?.name ?: "saved setup"}" }
     }
-    config.fanMode?.let { parts += "Fan ${FanController.labelFor(it)}" }
-    // Refresh rate only matters for non-AutoTDP bindings (AutoTDP forces max).
-    if (!PerAppConfig.isAuto(config.profileBinding)) config.refreshRateHz?.let { parts += "${it}Hz" }
-    return if (parts.isEmpty()) "Not configured" else parts.joinToString(" · ")
+    config.fanMode?.let { parts += "fan ${FanController.labelFor(it)}" }
+    if (!PerAppConfig.isAuto(config.profileBinding)) config.refreshRateHz?.let { parts += "$it Hz" }
+    return if (parts.isEmpty()) "Follows Power" else parts.joinToString(" · ")
 }
 
 /** "3h 51m" style runtime from a full battery at the given sustained draw. */
@@ -231,76 +246,66 @@ private fun PerAppRow(
     onClick: () -> Unit,
 ) {
     val configured = config != null
-    val accent = MaterialTheme.colorScheme.primary
-    Surface(
-        color = if (configured) accent.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = RoundedCornerShape(14.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(
-                1.dp,
-                if (configured) accent else MaterialTheme.colorScheme.outline,
-                RoundedCornerShape(14.dp),
-            )
-            .clickable(onClick = onClick),
-    ) {
+    Column {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outlineVariant))
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            app.icon?.let { icon ->
-                Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(38.dp))
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = app.label,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                )
-                Text(
-                    text = bindingSummary(config, profiles),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (configured) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
-                // AutoTDP learning status: once a session converges, this app's operating point is saved and
-                // warm-started next launch — so it starts already tuned instead of re-discovering from scratch.
-                tuned?.let {
+            app.icon?.let { icon -> Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(40.dp)) }
+                ?: Box(Modifier.size(40.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest))
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = if (it) "✓ tuned" else "learning…",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (it) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = app.label,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                     )
+                    if (tuned == true) {
+                        Text(
+                            "learned",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outline).padding(horizontal = 6.dp, vertical = 1.dp),
+                        )
+                    }
                 }
+                Text(
+                    text = bindingSummary(config, profiles) + if (tuned == false) " · learning" else "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (configured) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.outlineVariant,
+                    maxLines = 1,
+                )
             }
             val peakW = config?.measuredPeakW ?: 0f
             val avgW = config?.measuredAvgW ?: 0f
-            // Headline the realistic AVERAGE draw (falls back to peak until an average accrues) so the number
-            // matches the basis of the battery-life estimate shown right below it.
             val drawW = if (avgW > 0f) avgW else peakW
             if (drawW > 0f) {
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = String.format(java.util.Locale.US, "AVG PW DRAW %.1f W", drawW),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.tertiary,
+                        text = String.format(java.util.Locale.US, "%.1f W", drawW),
+                        style = com.kei.pulse.ui.theme.ReadoutSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                     )
                     if (batteryCapacityWh > 0f) {
-                        // Runtime from the same average draw — the realistic figure.
                         Text(
                             text = "≈ ${formatRuntime(batteryCapacityWh, drawW)}",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                         )
                     }
                 }
             }
+            Icon(
+                Icons.Rounded.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
 }
@@ -337,21 +342,24 @@ private fun PerAppConfigDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                DialogGroupLabel("PROFILE")
+                DialogGroupLabel("Power for this game")
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    DialogChip("None", profileBinding == null) { profileBinding = null }
-                    DialogChip("AutoTDP", PerAppConfig.isAuto(profileBinding)) {
+                    DialogChip("Follows Power", profileBinding == null) { profileBinding = null }
+                    DialogChip("Auto", PerAppConfig.isAuto(profileBinding)) {
                         profileBinding = PerAppConfig.AUTO_BINDING
+                    }
+                    DialogChip("Off · runs stock", PerAppConfig.isAutoOff(profileBinding)) {
+                        profileBinding = PerAppConfig.AUTO_OFF_BINDING
                     }
                     PowerTier.entries.forEach { tier ->
                         val binding = PerAppConfig.tierBinding(tier)
                         DialogChip(tier.label, profileBinding == binding) { profileBinding = binding }
                     }
                     profiles
-                        .filter { it.source != ProfileSource.VIRTUAL || it.id == ProfileStateResolver.STOCK_PROFILE_ID }
+                        .filter { it.source != ProfileSource.VIRTUAL }
                         .forEach { profile ->
                             DialogChip(profile.name, profileBinding == profile.id) {
                                 profileBinding = profile.id
@@ -359,15 +367,24 @@ private fun PerAppConfigDialog(
                         }
                 }
 
-                // AutoTDP uses the global fan choice; the per-app fan picker is hidden for it until the
-                // service layer supports per-app fan overrides during AutoTDP.
-                if (!PerAppConfig.isAuto(profileBinding)) {
-                    DialogGroupLabel("FAN (ODIN)")
+                // AutoTDP uses the global fan choice (Custom cascades, anything else runs as Smart); the per-app
+                // fan picker is replaced by a note for it until the service layer supports per-app fan overrides
+                // during AutoTDP.
+                if (PerAppConfig.isAuto(profileBinding)) {
+                    DialogGroupLabel("Fan")
+                    Text(
+                        text = "Uses the global fan while AutoTDP tunes this app: a Custom fan keeps running " +
+                            "(cascaded); Silent, Smart or Sport run as Smart.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    DialogGroupLabel("Fan")
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        DialogChip("Default", fanMode == null) { fanMode = null }
+                        DialogChip("Same as Power", fanMode == null) { fanMode = null }
                         FanController.MODES.forEach { mode ->
                             DialogChip(mode.label, fanMode == mode.value) { fanMode = mode.value }
                         }
@@ -377,7 +394,7 @@ private fun PerAppConfigDialog(
                 if (PerAppConfig.isAuto(profileBinding)) {
                     // AutoTDP owns the refresh rate (pins the panel to max), so the user picks an FPS
                     // target instead — AutoTDP trims clocks to hold it.
-                    DialogGroupLabel("FPS TARGET")
+                    DialogGroupLabel("Frame rate to hold")
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -389,7 +406,7 @@ private fun PerAppConfigDialog(
                         }
                     }
                     // Aggressive core parking is part of the AutoTDP algorithm, so it's set per app here.
-                    DialogGroupLabel("AGGRESSIVE PARK")
+                    DialogGroupLabel("Aggressive park")
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -397,23 +414,23 @@ private fun PerAppConfigDialog(
                         DialogChip("On", aggressivePark) { aggressivePark = true }
                         DialogChip("Off", !aggressivePark) { aggressivePark = false }
                     }
-                    DialogGroupLabel("EFFICIENCY")
+                    DialogGroupLabel("Lean towards")
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        DialogChip("Inherit", bias == null) { bias = null }
+                        DialogChip("Same as Power", bias == null) { bias = null }
                         AutoTdpBias.entries.forEach { b ->
                             DialogChip(b.label, bias == b) { bias = b }
                         }
                     }
                 } else {
-                    DialogGroupLabel("REFRESH RATE")
+                    DialogGroupLabel("Refresh rate")
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        DialogChip("Default", refreshRate == null) { refreshRate = null }
+                        DialogChip("Same as Power", refreshRate == null) { refreshRate = null }
                         listOf(60, 90, 120).forEach { hz ->
                             DialogChip("$hz Hz", refreshRate == hz) { refreshRate = hz }
                         }
@@ -465,34 +482,9 @@ private fun DialogGroupLabel(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.primary,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
 
 @Composable
-private fun DialogChip(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val accent = MaterialTheme.colorScheme.primary
-    Surface(
-        color = if (selected) accent.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = RoundedCornerShape(10.dp),
-        modifier = Modifier
-            .border(
-                1.dp,
-                if (selected) accent else MaterialTheme.colorScheme.outline,
-                RoundedCornerShape(10.dp),
-            )
-            .clickable(onClick = onClick),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleSmall,
-            color = if (selected) accent else MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-        )
-    }
-}
+private fun DialogChip(label: String, selected: Boolean, onClick: () -> Unit) = com.kei.pulse.ui.shell.Chip(label, selected, onClick)

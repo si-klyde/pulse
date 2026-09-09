@@ -17,7 +17,6 @@ import com.kei.pulse.model.OverlayPreset
 import com.kei.pulse.model.AutoTdpBias
 import com.kei.pulse.model.RgbMode
 import com.kei.pulse.model.RgbStick
-import com.kei.pulse.model.PulseThemeId
 import com.kei.pulse.model.TileInteractionBehavior
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.NonCancellable
@@ -40,7 +39,6 @@ class SettingsStorage(private val context: Context) {
     private val quickSettingsTilePromptShownKey = booleanPreferencesKey("quick_settings_tile_prompt_shown")
     private val quickSettingsTileAddedKey = booleanPreferencesKey("quick_settings_tile_added")
     private val batteryOptPromptShownKey = booleanPreferencesKey("battery_opt_prompt_shown")
-    private val themeIdKey = stringPreferencesKey("theme_id")
     private val colorSourceKey = stringPreferencesKey("color_source")
     private val accentColorKey = intPreferencesKey("accent_color")
     private val powerTargetEnabledKey = booleanPreferencesKey("power_target_enabled")
@@ -66,6 +64,7 @@ class SettingsStorage(private val context: Context) {
 
     // In-game overlay (OSD) preferences.
     private val overlayEnabledKey = booleanPreferencesKey("overlay_enabled")
+    private val chargeWhileScreenOffKey = booleanPreferencesKey("charge_while_screen_off")
     private val quickAccessEnabledKey = booleanPreferencesKey("quick_access_enabled")
     private val quickAccessShowHandleKey = booleanPreferencesKey("quick_access_show_handle")
     private val quickAccessComboKey = stringPreferencesKey("quick_access_combo")
@@ -99,7 +98,6 @@ class SettingsStorage(private val context: Context) {
 
     val settings: Flow<AppSettings> = context.settingsDataStore.data.map { preferences ->
         AppSettings(
-            themeId = preferences[themeIdKey]?.let(::parseThemeId) ?: PulseThemeId.SIGNAL,
             colorSource = preferences[colorSourceKey]
                 ?.let(::parseColorSource)
                 ?: AppColorSource.SYSTEM,
@@ -129,6 +127,7 @@ class SettingsStorage(private val context: Context) {
             autoTdpAggressivePark = preferences[autoTdpAggressiveParkKey] ?: true,
             autoTdpBias = preferences[autoTdpBiasKey]?.let(::parseAutoTdpBias) ?: AutoTdpBias.EFFICIENT,
             overlayEnabled = preferences[overlayEnabledKey] ?: false,
+            chargeWhileScreenOff = preferences[chargeWhileScreenOffKey] ?: true,
             quickAccessEnabled = preferences[quickAccessEnabledKey] ?: false,
             quickAccessShowHandle = preferences[quickAccessShowHandleKey] ?: true,
             quickAccessCombo = preferences[quickAccessComboKey],
@@ -184,6 +183,10 @@ class SettingsStorage(private val context: Context) {
 
     suspend fun persistPulseEnabled(enabled: Boolean) {
         context.settingsDataStore.edit { preferences -> preferences[pulseEnabledKey] = enabled }
+    }
+
+    suspend fun persistChargeWhileScreenOff(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences -> preferences[chargeWhileScreenOffKey] = enabled }
     }
 
     suspend fun persistOverlayEnabled(enabled: Boolean) {
@@ -452,12 +455,6 @@ class SettingsStorage(private val context: Context) {
         }
     }
 
-    suspend fun persistThemeId(themeId: PulseThemeId) {
-        context.settingsDataStore.edit { preferences ->
-            preferences[themeIdKey] = themeId.name
-        }
-    }
-
     suspend fun persistColorSource(colorSource: AppColorSource) {
         context.settingsDataStore.edit { preferences ->
             preferences[colorSourceKey] = colorSource.name
@@ -496,13 +493,6 @@ class SettingsStorage(private val context: Context) {
         return runCatching { TileInteractionBehavior.valueOf(raw) }
             .getOrDefault(TileInteractionBehavior.SHOW_DIALOG)
     }
-
-    private fun parseThemeId(raw: String): PulseThemeId =
-        when (raw) {
-            // "The Grid" was replaced by Ad Astra — keep anyone who had it selected on the successor.
-            "GRID" -> PulseThemeId.ADASTRA
-            else -> runCatching { PulseThemeId.valueOf(raw) }.getOrDefault(PulseThemeId.SIGNAL)
-        }
 
     private fun parseColorSource(raw: String): AppColorSource {
         return runCatching { AppColorSource.valueOf(raw) }

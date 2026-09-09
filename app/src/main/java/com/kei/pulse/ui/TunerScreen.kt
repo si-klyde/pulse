@@ -37,7 +37,6 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.Switch
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -49,6 +48,8 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import com.kei.pulse.ui.shell.PulseSwitch
+import com.kei.pulse.ui.shell.pulseSliderColors
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
@@ -138,6 +139,10 @@ fun MainTunerScreen(
     onAutoTdpAggressiveParkChange: (Boolean) -> Unit,
     autoTdpBias: AutoTdpBias,
     onAutoTdpBiasChange: (AutoTdpBias) -> Unit,
+    /** Hosted inside [com.kei.pulse.ui.shell.RailShell]: no header, telemetry HUD or page background. */
+    embedded: Boolean = false,
+    /** Manual mode of the Power section: the Auto controls live in PowerSection, so hide them here. */
+    hideAutoTdp: Boolean = false,
 ) {
     var dialogProfileId by remember { mutableStateOf<String?>(null) }
 
@@ -156,15 +161,15 @@ fun MainTunerScreen(
         }
     }
 
-    ScreenContainer(compactMode = false) {
+    ScreenContainer(compactMode = false, embedded = embedded) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+                .then(if (hideAutoTdp) Modifier else Modifier.verticalScroll(rememberScrollState()))
+                .padding(horizontal = if (hideAutoTdp) 0.dp else if (embedded) 24.dp else 20.dp, vertical = if (hideAutoTdp) 0.dp else if (embedded) 16.dp else 28.dp),
+            verticalArrangement = Arrangement.spacedBy(if (embedded) 14.dp else 18.dp),
         ) {
-            Header(
+            if (!embedded) Header(
                 state = state,
                 compactMode = false,
                 onOpenSettings = onOpenSettings,
@@ -180,14 +185,14 @@ fun MainTunerScreen(
                     fontWeight = FontWeight.SemiBold,
                 )
             } else {
-                TelemetryHud(
+                if (!embedded) TelemetryHud(
                     readTelemetry = readTelemetry,
                     estimatedPeakW = estimatedPeakW,
                 )
 
                 // Names the whole page so it's clear these are the everywhere-defaults, distinct from the
                 // per-app overrides (Settings → Per-app profiles).
-                Column(
+                if (!embedded) Column(
                     modifier = Modifier.padding(start = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
@@ -204,8 +209,8 @@ fun MainTunerScreen(
                     )
                 }
 
-                PulseSectionLabel("GLOBAL PERFORMANCE TIER")
-                AutoTdpModule(
+                if (!hideAutoTdp) PulseSectionLabel("Performance tier")
+                if (!hideAutoTdp) AutoTdpModule(
                     enabled = autoTdpEnabled,
                     onEnabledChange = onAutoTdpEnabledChange,
                     fpsTarget = autoTdpFpsTarget,
@@ -232,10 +237,10 @@ fun MainTunerScreen(
 
                 CurrentFrequenciesCard(state = state)
 
-                // AutoTDP manages the governor + clocks itself, but the fan stays user-configurable: a
-                // Custom fan set here keeps running (cascaded) during AutoTDP, otherwise Smart is used.
-                // Only the governor hides while AutoTDP is on.
-                FanModule(currentMode = fanMode, onSelect = onSelectFanMode, editor = fanCurveEditor)
+                // AutoTDP manages the governor + clocks itself; the fan stays user-configurable but only
+                // Custom is honoured in-session (cascaded), every other mode runs as Smart — the module
+                // says so while AutoTDP is on. Only the governor hides while AutoTDP is on.
+                if (!hideAutoTdp) FanModule(currentMode = fanMode, onSelect = onSelectFanMode, editor = fanCurveEditor, autoTdpOn = autoTdpEnabled)
                 if (!autoTdpEnabled) {
                     GovernorModule(current = governor, onSelect = onSelectGovernor)
                 }
@@ -253,9 +258,9 @@ fun MainTunerScreen(
                 if (activeTier == PowerTier.CUSTOM && !autoTdpEnabled) {
                     PulseSectionLabel(
                         when {
-                            powerTargetEnabled && !powerTargetCpuOnly -> "MANUAL CONTROL · LOCKED BY POWER TARGET"
-                            powerTargetEnabled && powerTargetCpuOnly -> "MANUAL CONTROL · CPU LOCKED · GPU FREE"
-                            else -> "MANUAL CONTROL · CPU + GPU"
+                            powerTargetEnabled && !powerTargetCpuOnly -> "Manual control · locked by power target"
+                            powerTargetEnabled && powerTargetCpuOnly -> "Manual control · CPU locked, GPU free"
+                            else -> "Manual control"
                         },
                     )
                     state.policies.forEach { policy ->
@@ -294,7 +299,7 @@ fun MainTunerScreen(
 
                     CpuFloorModule(currentPercent = cpuFloorPercent, onSelect = onSelectCpuFloor)
 
-                    PulseSectionLabel("SAVED SETUPS")
+                    PulseSectionLabel("Saved setups")
                     ProfileListSection(
                         state = state,
                         sleepProfileId = sleepProfileId,
@@ -459,7 +464,7 @@ private fun LoadingClustersCard() {
 }
 
 @Composable
-private fun ScreenNotifications(
+fun ScreenNotifications(
     state: TunerState,
     onStatusMessageShown: () -> Unit,
     onErrorMessageShown: () -> Unit,
@@ -483,11 +488,14 @@ private fun ScreenNotifications(
 @Composable
 private fun ScreenContainer(
     compactMode: Boolean,
+    embedded: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
-    if (compactMode) {
+    if (embedded) {
+        content()
+    } else if (compactMode) {
         // Quick Settings tile dialog: dim scrim + bottom sheet card.
         Box(modifier = Modifier.fillMaxSize().background(colorScheme.scrim.copy(alpha = 0.45f))) {
             Card(
@@ -495,7 +503,7 @@ private fun ScreenContainer(
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .padding(horizontal = 12.dp, vertical = 12.dp),
-                shape = RoundedCornerShape(30.dp, 30.dp, 24.dp, 24.dp),
+                shape = MaterialTheme.shapes.extraLarge,
                 colors = CardDefaults.cardColors(
                     containerColor = colorScheme.surfaceColorAtElevation(4.dp),
                 ),
@@ -533,23 +541,14 @@ private fun Header(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "PUL",
-                            style = MaterialTheme.typography.displayMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            text = "SE",
-                            style = MaterialTheme.typography.displayMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
                     Text(
-                        text = "CLUSTER · GPU FREQUENCY CONTROL",
-                        style = MaterialTheme.typography.labelMedium,
+                        text = "PULSE",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = "CPU cluster and GPU frequency control",
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     PServerStatusChip(isLinked = state.isPServerAvailable && state.policies.isNotEmpty())
@@ -588,7 +587,7 @@ private fun PServerStatusChip(isLinked: Boolean) {
     val color = if (isLinked) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error
     Surface(
         color = color.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(999.dp),
+        shape = MaterialTheme.shapes.small,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
@@ -601,7 +600,7 @@ private fun PServerStatusChip(isLinked: Boolean) {
                     .background(color, CircleShape),
             )
             Text(
-                text = if (isLinked) "PSERVER · LINKED · NO-ROOT" else "PSERVER UNAVAILABLE",
+                text = if (isLinked) "PServer linked, no root needed" else "PServer unavailable",
                 style = MaterialTheme.typography.labelSmall,
                 color = color,
             )
@@ -653,7 +652,7 @@ private fun ProfileListSection(
 ) {
     SectionCard(
         title = null,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.72f),
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -742,7 +741,7 @@ private fun ProfileListRow(
     onMoveProfile: (Int) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val rowShape = RoundedCornerShape(20.dp)
+    val rowShape = MaterialTheme.shapes.large
     val containerColor = when {
         isApplied && isSelected -> colorScheme.primaryContainer
         isApplied -> colorScheme.primaryContainer
@@ -885,7 +884,7 @@ private fun ValuePreviewChips(
         values.toSortedMap().forEach { (policyId, value) ->
             Surface(
                 color = chipContainerColor,
-                shape = RoundedCornerShape(999.dp),
+                shape = MaterialTheme.shapes.small,
             ) {
                 val policy = policiesById[policyId]
                 Text(
@@ -1029,7 +1028,7 @@ private fun ProfileEditorDialog(
             modifier = Modifier
                 .fillMaxWidth(0.8f)
                 .widthIn(max = 900.dp),
-            shape = RoundedCornerShape(28.dp),
+            shape = MaterialTheme.shapes.large,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f),
             ),
@@ -1168,7 +1167,7 @@ private fun PrimeBoostLimitRow(limited: Boolean, onToggle: (Boolean) -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Switch(checked = limited, onCheckedChange = onToggle)
+        PulseSwitch(checked = limited, onCheckedChange = onToggle)
     }
 }
 
@@ -1256,7 +1255,7 @@ private fun PolicyCard(
                 } else {
                     MaterialTheme.colorScheme.tertiaryContainer
                 },
-                shape = RoundedCornerShape(999.dp),
+                shape = MaterialTheme.shapes.small,
             ) {
                 Text(
                     text = "Current ${formatFrequency(actualValue, boosted = policy.isBoosted(actualValue))}",
@@ -1280,6 +1279,7 @@ private fun PolicyCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Slider(
+                    colors = pulseSliderColors(),
                     value = currentIndex.toFloat(),
                     onValueChange = { raw ->
                         val index = raw.toInt().coerceIn(0, supported.lastIndex)
@@ -1288,13 +1288,6 @@ private fun PolicyCard(
                     valueRange = 0f..supported.lastIndex.toFloat(),
                     steps = (supported.size - 2).coerceAtLeast(0),
                     enabled = enabled,
-                    colors = SliderDefaults.colors(
-                        thumbColor = if (policy.isGpu) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
-                        activeTrackColor = if (policy.isGpu) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
-                        inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        activeTickColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
-                        inactiveTickColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f),
-                    ),
                     modifier = Modifier.weight(1f),
                 )
                 Text(
@@ -1316,7 +1309,7 @@ private fun SectionCard(
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.large,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(

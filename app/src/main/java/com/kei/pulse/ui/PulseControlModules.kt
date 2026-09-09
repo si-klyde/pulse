@@ -29,8 +29,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import com.kei.pulse.ui.shell.PulseSwitch
+import com.kei.pulse.ui.shell.pulseSliderColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -125,32 +126,26 @@ private fun TierCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val accent = if (tier == PowerTier.POWER_SAVING) {
-        MaterialTheme.colorScheme.secondary
-    } else {
-        MaterialTheme.colorScheme.primary
-    }
-    val container = if (selected) accent.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surfaceContainerHigh
-    val borderColor = if (selected) accent else MaterialTheme.colorScheme.outline
+    // Design vocabulary: hairline unselected, inverted ink selected. No per-tier colour.
     Surface(
-        color = container,
-        shape = RoundedCornerShape(14.dp),
+        color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.surface,
+        shape = MaterialTheme.shapes.large,
         modifier = modifier
-            .border(if (selected) 1.5.dp else 1.dp, borderColor, RoundedCornerShape(14.dp))
+            .then(if (selected) Modifier else Modifier.border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large))
             .clickable(onClick = onClick),
     ) {
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
             Text(
                 text = tier.label,
                 style = MaterialTheme.typography.titleMedium,
-                color = if (selected) accent else MaterialTheme.colorScheme.onSurface,
+                color = if (selected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = tier.tagline,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (selected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -189,9 +184,11 @@ fun FanModule(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
     editor: FanCurveEditorBindings? = null,
+    /** AutoTDP is the default for games: only Custom is honoured in-session, other modes run as Smart. */
+    autoTdpOn: Boolean = false,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        PulseSectionLabel("FAN · ${FanController.labelFor(currentMode).uppercase()}")
+        PulseSectionLabel("Fan · ${FanController.labelFor(currentMode)}")
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -210,11 +207,32 @@ fun FanModule(
                 )
             }
         }
+        if (autoTdpOn) {
+            Text(
+                text = fanUnderAutoTdpCaption(currentMode, customAvailable = editor != null),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
         if (currentMode == FanController.CUSTOM && editor != null) {
             Spacer(Modifier.height(10.dp))
             FanCurveEditor(bindings = editor)
         }
     }
+}
+
+/** The one-line truth about the fan while AutoTDP tunes a game (pure, so the copy is testable). */
+fun fanUnderAutoTdpCaption(currentMode: Int?, customAvailable: Boolean): String = when {
+    currentMode == FanController.CUSTOM ->
+        "While AutoTDP tunes a game, Custom keeps running; Hold-target is capped 2 °C under the thermal " +
+            "ceiling so the fan spins up before the clocks trim."
+    customAvailable ->
+        "While AutoTDP tunes a game the fan runs as Smart regardless of this choice — pick Custom to keep " +
+            "your own quieter loop in-game. This mode applies outside tuned games."
+    else ->
+        "While AutoTDP tunes a game the fan runs as Smart regardless of this choice. This mode applies " +
+            "outside tuned games."
 }
 
 /**
@@ -235,7 +253,7 @@ fun FanCurveEditor(bindings: FanCurveEditorBindings, modifier: Modifier = Modifi
     val outline = MaterialTheme.colorScheme.outline
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
     val kneeFill = MaterialTheme.colorScheme.surfaceContainerHigh
-    val markerColor = Color(0xFFFF5D6C)
+    val markerColor = Color(0xFFD96B5C)
 
     // ONE stable points state (the BASE curve) + bias; external changes (e.g. Autocalibrate) sync in via
     // LaunchedEffect. The graph draws the EFFECTIVE curve = base shifted by the Cooler/Quieter bias.
@@ -263,16 +281,16 @@ fun FanCurveEditor(bindings: FanCurveEditorBindings, modifier: Modifier = Modifi
 
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         modifier = modifier
             .fillMaxWidth()
-            .border(1.dp, outline, RoundedCornerShape(16.dp)),
+            .border(1.dp, outline, MaterialTheme.shapes.large),
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             // Header + live readout: "47°C · fan 49%" — temp + the ACTUAL fan duty % off the device.
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(
-                    text = "CUSTOM FAN CURVE",
+                    text = "Custom fan curve",
                     style = MaterialTheme.typography.labelMedium,
                     color = onSurfaceVariant,
                 )
@@ -296,7 +314,7 @@ fun FanCurveEditor(bindings: FanCurveEditorBindings, modifier: Modifier = Modifi
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("HOLD TARGET TEMP", style = MaterialTheme.typography.labelMedium, color = onSurfaceVariant)
+                    Text("Hold target temp", style = MaterialTheme.typography.labelMedium, color = onSurfaceVariant)
                     Text(
                         if (bindings.smartEnabled) "Closed-loop — the fan self-adjusts to hold the target, quietly"
                         else "Manual — you shape the temperature → fan curve",
@@ -306,7 +324,7 @@ fun FanCurveEditor(bindings: FanCurveEditorBindings, modifier: Modifier = Modifi
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Switch(checked = bindings.smartEnabled, onCheckedChange = bindings.onSmartToggle)
+                PulseSwitch(checked = bindings.smartEnabled, onCheckedChange = bindings.onSmartToggle)
             }
             Spacer(Modifier.height(8.dp))
 
@@ -315,7 +333,7 @@ fun FanCurveEditor(bindings: FanCurveEditorBindings, modifier: Modifier = Modifi
                 var target by remember { mutableStateOf(bindings.targetTempC.toFloat()) }
                 LaunchedEffect(bindings.targetTempC) { target = bindings.targetTempC.toFloat() }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("TARGET TEMP", style = MaterialTheme.typography.labelMedium, color = onSurfaceVariant)
+                    Text("Target temp", style = MaterialTheme.typography.labelMedium, color = onSurfaceVariant)
                     Text(
                         "hold ${target.roundToInt()}°C",
                         style = MaterialTheme.typography.labelMedium,
@@ -324,6 +342,7 @@ fun FanCurveEditor(bindings: FanCurveEditorBindings, modifier: Modifier = Modifi
                     )
                 }
                 Slider(
+                    colors = pulseSliderColors(),
                     value = target,
                     onValueChange = { target = it },
                     onValueChangeFinished = { bindings.onTargetTempChange(target.roundToInt()) },
@@ -353,7 +372,7 @@ fun FanCurveEditor(bindings: FanCurveEditorBindings, modifier: Modifier = Modifi
                     modifier = Modifier.height(190.dp).width(40.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text("COOL", style = MaterialTheme.typography.labelSmall, color = tertiary)
+                    Text("Cool", style = MaterialTheme.typography.labelSmall, color = tertiary)
                     VerticalSlider(
                         value = biasState.value.toFloat(),
                         onValueChange = { biasState.value = it.roundToInt() },
@@ -361,7 +380,7 @@ fun FanCurveEditor(bindings: FanCurveEditorBindings, modifier: Modifier = Modifi
                         valueRange = -FanCurve.MAX_BIAS.toFloat()..FanCurve.MAX_BIAS.toFloat(),
                         modifier = Modifier.weight(1f),
                     )
-                    Text("QUIET", style = MaterialTheme.typography.labelSmall, color = onSurfaceVariant)
+                    Text("Quiet", style = MaterialTheme.typography.labelSmall, color = onSurfaceVariant)
                 }
 
                 Box(modifier = Modifier.weight(1f).height(190.dp)) {
@@ -522,7 +541,7 @@ fun FanCurveEditor(bindings: FanCurveEditorBindings, modifier: Modifier = Modifi
             var step by remember { mutableStateOf(bindings.responseStep.toFloat()) }
             LaunchedEffect(bindings.responseStep) { step = bindings.responseStep.toFloat() }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("RESPONSE", style = MaterialTheme.typography.labelMedium, color = onSurfaceVariant)
+                Text("Response", style = MaterialTheme.typography.labelMedium, color = onSurfaceVariant)
                 Text(
                     "smoother · ${step.roundToInt()}%/s · snappier",
                     style = MaterialTheme.typography.labelMedium,
@@ -530,6 +549,7 @@ fun FanCurveEditor(bindings: FanCurveEditorBindings, modifier: Modifier = Modifi
                 )
             }
             Slider(
+                colors = pulseSliderColors(),
                 value = step,
                 onValueChange = { step = it },
                 onValueChangeFinished = { bindings.onResponseStepChange(step.roundToInt()) },
@@ -581,6 +601,7 @@ private fun VerticalSlider(
 ) {
     Box(modifier, contentAlignment = Alignment.Center) {
         Slider(
+            colors = pulseSliderColors(),
             value = value,
             onValueChange = onValueChange,
             onValueChangeFinished = onValueChangeFinished,
@@ -614,7 +635,7 @@ fun ResolutionModule(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         val nativeLabel = native?.let { " · ${it.width}×${it.height}" } ?: ""
-        PulseSectionLabel("RENDER SCALE$nativeLabel")
+        PulseSectionLabel("Render scale$nativeLabel")
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -645,30 +666,32 @@ private fun PulseChip(
     onClick: () -> Unit,
     sub: String? = null,
 ) {
-    val container = if (selected) accent.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surfaceContainerHigh
-    val borderColor = if (selected) accent else MaterialTheme.colorScheme.outline
+    // Design vocabulary: unselected = hairline outline, selected = inverted ink fill. `accent` is ignored on
+    // purpose — colour is reserved for meaning (temperature/load), never for selection.
+    @Suppress("UNUSED_VARIABLE") val unused = accent
+    val selectedFill = MaterialTheme.colorScheme.onSurface
     Surface(
-        color = container,
-        shape = RoundedCornerShape(10.dp),
+        color = if (selected) selectedFill else MaterialTheme.colorScheme.surface,
+        shape = MaterialTheme.shapes.medium,
         modifier = Modifier
-            .border(1.dp, borderColor, RoundedCornerShape(10.dp))
+            .then(if (selected) Modifier else Modifier.border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.medium))
             .clickable(onClick = onClick),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.titleSmall,
-                color = if (selected) accent else MaterialTheme.colorScheme.onSurface,
+                color = if (selected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
             )
             if (sub != null) {
                 Text(
                     text = sub,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (selected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                 )
             }
@@ -693,18 +716,18 @@ fun TelemetryHud(
     val cpuMhz = snap.cpuClocksMhz.values.maxOrNull()
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         modifier = modifier
             .fillMaxWidth()
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp)),
+            .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large),
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             val muted = MaterialTheme.colorScheme.onSurfaceVariant
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 TelemetryMetric("CPU", cpuMhz?.toString(), "MHz", MaterialTheme.colorScheme.primary, Modifier.weight(1f))
                 TelemetryMetric("GPU", snap.gpuMhz?.toString(), "MHz", MaterialTheme.colorScheme.tertiary, Modifier.weight(1f))
-                TelemetryMetric("CPU LOAD", snap.cpuLoadPercent?.toString(), "%", loadColor(snap.cpuLoadPercent, muted), Modifier.weight(1f))
-                TelemetryMetric("BATT", snap.batteryPercent?.toString(), "%", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+                TelemetryMetric("CPU load", snap.cpuLoadPercent?.toString(), "%", loadColor(snap.cpuLoadPercent, muted), Modifier.weight(1f))
+                TelemetryMetric("Battery", snap.batteryPercent?.toString(), "%", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
             }
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 12.dp),
@@ -713,10 +736,10 @@ fun TelemetryHud(
             val drawValue = snap.batteryDrawW?.let { String.format(java.util.Locale.US, "%.1f", it) } ?: snap.batteryDrawMa?.toString()
             val drawUnit = if (snap.batteryDrawW != null) "W" else "mA"
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                TelemetryMetric("CPU TEMP", snap.cpuTempC?.toString(), "°C", tempColor(snap.cpuTempC, muted), Modifier.weight(1f))
-                TelemetryMetric("GPU TEMP", snap.gpuTempC?.toString(), "°C", tempColor(snap.gpuTempC, muted), Modifier.weight(1f))
-                TelemetryMetric("DRAW", drawValue, drawUnit, drawColor(snap.batteryDrawW, snap.batteryDrawMa, estimatedPeakW, snap.isDischarging, muted), Modifier.weight(1f))
-                TelemetryMetric("EST PK", estimatedPeakW?.let { String.format(java.util.Locale.US, "%.0f", it) }, "W", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+                TelemetryMetric("CPU temp", snap.cpuTempC?.toString(), "°C", tempColor(snap.cpuTempC, muted), Modifier.weight(1f))
+                TelemetryMetric("GPU temp", snap.gpuTempC?.toString(), "°C", tempColor(snap.gpuTempC, muted), Modifier.weight(1f))
+                TelemetryMetric("Draw", drawValue, drawUnit, drawColor(snap.batteryDrawW, snap.batteryDrawMa, estimatedPeakW, snap.isDischarging, muted), Modifier.weight(1f))
+                TelemetryMetric("Est. peak", estimatedPeakW?.let { String.format(java.util.Locale.US, "%.0f", it) }, "W", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
             }
         }
     }
@@ -725,9 +748,9 @@ fun TelemetryHud(
 // Semantic meter ramp: green/cool (low) → amber (mid) → red (high). Used for temps, GPU load,
 // and power draw so the colour describes what the reading is doing, not the theme. CPU/GPU
 // clocks keep their theme identity colours; this is the "Direction A" semantic-meter scheme.
-private val MeterCool = Color(0xFF4FD89B)
-private val MeterWarm = Color(0xFFFFB000)
-private val MeterHot = Color(0xFFFF5D6C)
+private val MeterCool = Color(0xFF7FB59A)
+private val MeterWarm = Color(0xFFD9A441)
+private val MeterHot = Color(0xFFD96B5C)
 
 private fun meterRamp(fraction: Float): Color {
     val f = fraction.coerceIn(0f, 1f)
@@ -763,7 +786,7 @@ private fun TelemetryMetric(
         )
         Text(
             text = value ?: "—",
-            style = MaterialTheme.typography.titleLarge,
+            style = com.kei.pulse.ui.theme.ReadoutLarge,
             color = if (value != null) accent else MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
@@ -779,7 +802,7 @@ private fun TelemetryMetric(
 fun GovernorModule(current: String?, onSelect: (GovernorOption) -> Unit, modifier: Modifier = Modifier) {
     val activeOption = GovernorController.optionForGovernor(current)
     Column(modifier = modifier.fillMaxWidth()) {
-        PulseSectionLabel("CPU GOVERNOR${current?.let { " · ${it.uppercase()}" } ?: ""}")
+        PulseSectionLabel("CPU governor${current?.let { " · $it" } ?: ""}")
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -800,7 +823,7 @@ fun GovernorModule(current: String?, onSelect: (GovernorOption) -> Unit, modifie
 @Composable
 fun RefreshRateModule(current: Int?, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
     Column(modifier = modifier.fillMaxWidth()) {
-        PulseSectionLabel("REFRESH RATE${current?.let { " · ${it}HZ" } ?: ""}")
+        PulseSectionLabel("Refresh rate${current?.let { " · $it Hz" } ?: ""}")
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -828,7 +851,7 @@ fun GpuFloorModule(
 ) {
     val options = listOf(0, 25, 50, 75)
     Column(modifier = modifier.fillMaxWidth()) {
-        PulseSectionLabel("GPU FLOOR")
+        PulseSectionLabel("GPU floor")
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -839,7 +862,7 @@ fun GpuFloorModule(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Switch(checked = locked, onCheckedChange = onToggleLock)
+            PulseSwitch(checked = locked, onCheckedChange = onToggleLock)
         }
         if (locked) {
             Text(
@@ -890,13 +913,13 @@ fun PowerTargetModule(
     var live by remember(percent) { mutableStateOf(percent.toFloat()) }
     Surface(
         color = if (enabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         modifier = modifier
             .fillMaxWidth()
             .border(
                 1.dp,
                 if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                RoundedCornerShape(16.dp),
+                MaterialTheme.shapes.large,
             ),
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
@@ -907,7 +930,7 @@ fun PowerTargetModule(
             ) {
                 Column {
                     Text(
-                        text = "POWER TARGET",
+                        text = "Power target",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -917,10 +940,11 @@ fun PowerTargetModule(
                         color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                     )
                 }
-                Switch(checked = enabled, onCheckedChange = onEnabledChange)
+                PulseSwitch(checked = enabled, onCheckedChange = onEnabledChange)
             }
             if (enabled) {
                 Slider(
+                    colors = pulseSliderColors(),
                     value = live,
                     onValueChange = { live = it },
                     onValueChangeFinished = { onPercentChange(live.toInt()) },
@@ -946,7 +970,7 @@ fun PowerTargetModule(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
-                    Switch(checked = cpuOnly, onCheckedChange = onCpuOnlyChange)
+                    PulseSwitch(checked = cpuOnly, onCheckedChange = onCpuOnlyChange)
                 }
             }
         }
@@ -958,9 +982,11 @@ private fun wattLabel(w: Float): String = "%.1f".format(w).removeSuffix(".0")
 
 /**
  * AutoTDP master toggle. When on, PULSE dynamically trims the CPU first, then GPU, to hold each
- * foreground game's refresh-rate FPS (uses your Custom fan if set, otherwise Smart; refresh rate
- * untouched). It becomes the default for any game without its own per-app binding, so the manual
- * tier/clock controls are locked — but the fan stays adjustable.
+ * foreground game's refresh-rate FPS (refresh rate untouched). It becomes the default for any game
+ * without its own per-app binding, so the manual tier/clock controls are locked. Fan: only the Custom
+ * loop is honoured during a session (target capped 2 °C under the thermal ceiling so it spins up before
+ * the clocks trim); Silent/Smart/Sport all run as vendor Smart until the game exits — see
+ * `FanArbiter` + `AutoTuneController.autoTdpFanTargetC`.
  */
 @Composable
 fun AutoTdpModule(
@@ -978,13 +1004,13 @@ fun AutoTdpModule(
 ) {
     Surface(
         color = if (enabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         modifier = modifier
             .fillMaxWidth()
             .border(
                 1.dp,
                 if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                RoundedCornerShape(16.dp),
+                MaterialTheme.shapes.large,
             ),
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
@@ -995,7 +1021,7 @@ fun AutoTdpModule(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "AUTOTDP",
+                        text = "AutoTDP",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -1005,15 +1031,16 @@ fun AutoTdpModule(
                         color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                     )
                 }
-                Switch(checked = enabled, onCheckedChange = onEnabledChange)
+                PulseSwitch(checked = enabled, onCheckedChange = onEnabledChange)
             }
             Text(
                 text = if (enabled) {
                     "Automatically tunes the CPU and GPU clocks on the fly, aiming to hold each app's " +
-                        "frame rate at the lowest power. It uses your Custom fan if you've set one (it keeps " +
-                        "running, cascaded), otherwise the Smart fan. The tier and manual clock controls below " +
-                        "are locked while AutoTDP is on, but the fan stays adjustable. Per-app bindings still " +
-                        "take priority, and a hand-tuned manual profile may still perform better in some games."
+                        "frame rate at the lowest power. Fan: a Custom fan keeps running (its target capped " +
+                        "2 °C under the thermal ceiling so it spins up before clocks trim); Silent, Smart and " +
+                        "Sport all run as Smart while a game is tuned. The tier and manual clock controls below " +
+                        "are locked while AutoTDP is on. Per-app bindings still take priority, and a hand-tuned " +
+                        "manual profile may still perform better in some games."
                 } else {
                     "Automatically tunes the CPU and GPU clocks on the fly to hold your FPS target at the " +
                         "lowest power — games, emulators and even media — using your Custom fan if set, " +
@@ -1026,7 +1053,7 @@ fun AutoTdpModule(
             )
             if (enabled) {
                 Text(
-                    text = "DEFAULT FPS TARGET",
+                    text = "Default FPS target",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 12.dp, bottom = 6.dp),
@@ -1063,10 +1090,10 @@ fun AutoTdpModule(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Switch(checked = aggressivePark, onCheckedChange = onAggressiveParkChange)
+                    PulseSwitch(checked = aggressivePark, onCheckedChange = onAggressiveParkChange)
                 }
                 Text(
-                    text = "EFFICIENCY",
+                    text = "Efficiency",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 14.dp, bottom = 6.dp),
@@ -1110,7 +1137,7 @@ fun AutoTdpModule(
 fun CpuFloorModule(currentPercent: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
     val options = listOf(0, 25, 50, 75)
     Column(modifier = modifier.fillMaxWidth()) {
-        PulseSectionLabel("CPU FLOOR")
+        PulseSectionLabel("CPU floor")
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),

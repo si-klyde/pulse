@@ -28,6 +28,8 @@ data class OverlayStats(
     val gpuLevels: List<Int>? = null,
     /** The Adreno's LIVE current max (kHz) read back from the device — the stepper's source of truth. */
     val gpuCapKhz: Int? = null,
+    /** Label of the game in front (from the live session), for the Quick Access header. */
+    val gameLabel: String? = null,
 )
 
 /** Below this smoothed draw (W), a battery time-left estimate is meaningless (paused game ≈ 0 W → "200h"). */

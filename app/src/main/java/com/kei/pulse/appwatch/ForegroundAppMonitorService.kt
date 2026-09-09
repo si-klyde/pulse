@@ -74,6 +74,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.math.roundToInt
@@ -103,6 +104,7 @@ class ForegroundAppMonitorService : Service() {
     private val governorController = GovernorController()
     private val telemetryReader = TelemetryReader()
     private val fpsReader by lazy { FpsReader(this) }
+    private val sessionRecorder by lazy { SessionRecorder(this) }
     private val overlay by lazy { PerformanceOverlay(this) }
     private val quickAccess by lazy { QuickAccessOverlay(this) }
     private var comboJob: Job? = null // getevent detect loop for the Quick Access combo (when set + enabled)
@@ -601,6 +603,7 @@ class ForegroundAppMonitorService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        runCatching { sessionRecorder.finish() }
         overlay.hide()
         quickAccess.hide()
         comboJob?.cancel()
@@ -687,7 +690,8 @@ class ForegroundAppMonitorService : Service() {
             // (never fan_mode=6 unattended), darken the info-LED, un-park the prime, and kill the combo
             // producer; the vendor fan service + kernel thermal own any emergency thermals while asleep.
             val screenOn = getSystemService<android.os.PowerManager>()?.isInteractive != false
-            when (SleepGate.transition(screenWasOn, screenOn)) {
+            val transition = SleepGate.transition(screenWasOn, screenOn)
+            when (transition) {
                 SleepGate.Transition.WENT_OFF -> {
                     try {
                         onScreenOff(settings)
@@ -702,6 +706,7 @@ class ForegroundAppMonitorService : Service() {
                 SleepGate.Transition.NONE -> Unit
             }
             screenWasOn = screenOn
+            chargingGuardTick(settings, screenOn, justWentOff = transition == SleepGate.Transition.WENT_OFF)
             if (SleepGate.tickWork(screenOn) == SleepGate.TickWork.SKIP) {
                 delay(POLL_INTERVAL_MS)
                 continue
@@ -790,6 +795,7 @@ class ForegroundAppMonitorService : Service() {
                 active = settings.quickAccessEnabled && QuickAccessOverlay.hasPermission(this) && screenOn,
             )
             if (!overlayShouldShow && !autoActive && !quickAccessShouldShow) {
+                sessionRecorder.idle()
                 if (overlay.isShowing) hideOverlay()
                 if (quickAccess.isShowing) quickAccess.hide()
                 ensureQuickAccessSettingsFeed(false)
@@ -803,6 +809,15 @@ class ForegroundAppMonitorService : Service() {
             // working, so idle/menu/paused time can't poison the battery-life estimate.
             lastActiveLoadPercent = maxOf(telemetry.cpuLoadPercent ?: 0, telemetry.gpuLoadPercent ?: 0)
             val fps = fpsReader.read(osdTarget) // FPS for the OSD target (works for standalone-overlay apps too)
+            // Session recap for the home screen: one sample per tick from the reads above, no extra I/O.
+            if (osdTarget != null && !isNeutralForeground(osdTarget) && !neutralForeground) {
+                sessionRecorder.sample(
+                    osdTarget, fps, telemetry,
+                    targetFps = com.kei.pulse.overlay.QuickAccessPerApp.effectiveFps(boundConfig, settings.autoTdpFpsTarget),
+                )
+            } else {
+                sessionRecorder.idle()
+            }
             val auto = if (autoActive) buildAutoReadout(policies, telemetry) else null
             // Keep the HUD/QA profile banner live: the bound mode can change mid-session (a Quick Access preset
             // switch, an AutoTDP stop) WITHOUT re-showing the overlay, so recompute the label every tick instead
@@ -1019,6 +1034,27 @@ class ForegroundAppMonitorService : Service() {
      *  4. COMBO: tick() (which normally arms/disarms the watcher) won't run while asleep — disarm now so the
      *     detached getevent producer is killed instead of capturing (and costing polls) all night.
      */
+    private val chargingController = com.kei.pulse.data.ChargingController()
+    private var chargingGuardLastCheckMs = 0L
+
+    /**
+     * "Always charge while the screen is off": on screen-off and once a minute while off, if the device is
+     * plugged in and the vendor left the battery bypassed, write the one node that makes it charge. One root
+     * read (and rarely a write) per minute while asleep; nothing while awake. See [ChargingGuard].
+     */
+    private suspend fun chargingGuardTick(settings: AppSettings, screenOn: Boolean, justWentOff: Boolean) {
+        if (screenOn || !settings.chargeWhileScreenOff) return
+        val now = System.currentTimeMillis()
+        if (!ChargingGuard.shouldCheck(now, chargingGuardLastCheckMs, justWentOff)) return
+        chargingGuardLastCheckMs = now
+        if (!com.kei.pulse.data.PowerSource.isPlugged(this)) return
+        val node = withContext(Dispatchers.IO) { chargingController.readUsbChargeNow() }
+        if (ChargingGuard.decide(enabled = true, screenOn = false, plugged = true, usbChargeNow = node) == ChargingGuard.Action.ENABLE_CHARGE) {
+            withContext(Dispatchers.IO) { chargingController.setUsbChargeNow(true) }
+            android.util.Log.i("PulseCharge", "screen off + plugged but usb_charge_now=0 → enabled charging")
+        }
+    }
+
     private suspend fun onScreenOff(settings: AppSettings) {
         // Each hand-off is INDEPENDENTLY guarded so a failure in one never skips the others — most importantly
         // the combo disarm, which won't refire (the WENT_OFF edge is consumed once). The realistic throw
@@ -1267,7 +1303,9 @@ class ForegroundAppMonitorService : Service() {
         overlayMinutesDischarging = telemetry.isDischarging
         overlayMinutesEma = smoothMinutes(overlayMinutesEma, rawMinutes, MINUTES_SMOOTH_ALPHA)
         val minutesLeft = displayMinutes(overlayMinutesEma)
+        val liveSession = com.kei.pulse.data.SessionFeed.current.value?.takeIf { it.isLive }
         return OverlayStats(
+            gameLabel = liveSession?.label,
             telemetry = telemetry,
             fps = fps,
             sessionElapsedMs = sessionElapsedMs(),
@@ -1577,7 +1615,7 @@ class ForegroundAppMonitorService : Service() {
             "/sys/module/msm_performance/parameters/gpu_max_freq",
         )
         val dump = candidates.joinToString("\n") { path ->
-            val v = com.kei.pulse.root.RootSupport.runRootCommand("cat $path 2>/dev/null")
+            val v = com.kei.pulse.root.RootSupport.cat(path)
                 ?.trim()?.replace("\n", " ")
             "  $path = ${if (v.isNullOrBlank()) "(absent)" else v}"
         }
@@ -1622,7 +1660,7 @@ class ForegroundAppMonitorService : Service() {
         // if it's low, our selective min-lower held and the prime should follow its cap down.
         val mmStr = if (autoTdpLogTick++ % 10 == 0) {
             fun readMhz(path: String) = com.kei.pulse.root.RootSupport
-                .runRootCommand("cat $path")?.trim()?.toIntOrNull()?.div(1000) ?: -1
+                .cat(path)?.toIntOrNull()?.div(1000) ?: -1
             " mn/mx[" + policies.filterNot { it.isGpu }.joinToString(",") { p ->
                 "${p.id}:${readMhz("${p.policyPath}/scaling_min_freq")}/${readMhz(p.scalingMaxPath)}"
             } + "]"
@@ -1675,7 +1713,8 @@ class ForegroundAppMonitorService : Service() {
      * load-scaled estimate at the current ceilings (flagged so the overlay shows ⚡).
      */
     private fun overlayPower(t: TelemetrySnapshot): Pair<Float?, Boolean> {
-        if (t.isDischarging) {
+        // The sysfs status string says Discharging on AC with charging separation on; ask the framework.
+        if (!com.kei.pulse.data.PowerSource.isPlugged(this)) {
             overlayChargeEma = null
             val w = t.batteryDrawW ?: return overlayDrawEma to false
             val ema = overlayDrawEma?.let { it * 0.7f + w * 0.3f } ?: w
@@ -1749,20 +1788,31 @@ class ForegroundAppMonitorService : Service() {
         )
     }
 
+    /**
+     * What is in front right now. Incremental: the first call seeds the tracker with a long lookback (so a
+     * (re)start while a game is already running is not blind), later calls feed only the events since the
+     * previous query. See [ForegroundTracker] for why activities are tracked individually.
+     */
     private fun currentForegroundPackage(): String? {
         val usageStats = getSystemService<UsageStatsManager>() ?: return null
         val now = System.currentTimeMillis()
-        val events = usageStats.queryEvents(now - EVENT_WINDOW_MS, now)
-        var latest: String? = null
-        val event = UsageEvents.Event()
-        while (events.hasNextEvent()) {
-            events.getNextEvent(event)
-            if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
-                latest = event.packageName
-            }
-        }
-        return latest
+        val from = if (foregroundQueryFromMs == 0L) now - STARTUP_LOOKBACK_MS else foregroundQueryFromMs - EVENT_OVERLAP_MS
+        val events = usageStats.queryEvents(from, now)
+        foregroundTracker.feed(
+            sequence {
+                val e = UsageEvents.Event()
+                while (events.hasNextEvent()) {
+                    events.getNextEvent(e)
+                    yield(ForegroundTracker.Ev(e.eventType, e.packageName, e.className, e.timeStamp))
+                }
+            },
+        )
+        if (foregroundQueryFromMs == 0L) android.util.Log.i("PulseWatcher", "startup lookback foreground=${foregroundTracker.current ?: "none"}")
+        foregroundQueryFromMs = now
+        return foregroundTracker.current
     }
+    private val foregroundTracker = ForegroundTracker()
+    private var foregroundQueryFromMs = 0L
 
     /**
      * [force] (scope-commit path only): re-run the bind decision even though [foreground] is ALREADY the
@@ -2009,7 +2059,10 @@ class ForegroundAppMonitorService : Service() {
         private const val FAN_SLEW_MS = 300L // smooth-ramp cadence: small steps → smooth & quiet
         private const val FAN_RECHECK_MS = 120L // duty re-check cadence: catch the vendor's game-transition
         // 50% reset fast enough that the re-pin is inaudible (decoupled from the slower ramp above)
-        private const val EVENT_WINDOW_MS = 10_000L
+        /** Re-query this much before the previous query end; the tracker drops already-seen events by timestamp. */
+        private const val EVENT_OVERLAP_MS = 2_000L
+        /** How far back the one-time startup lookback searches for an app that is already in front. */
+        private const val STARTUP_LOOKBACK_MS = 6L * 60 * 60 * 1000
         // Per-app draw is only counted above this load — idle/menu (≈1-2%) is frozen out so it can't poison
         // the average; real play (CPU/GPU load ~15-50%) clears it easily.
         private const val MIN_ACTIVE_LOAD_PERCENT = 12

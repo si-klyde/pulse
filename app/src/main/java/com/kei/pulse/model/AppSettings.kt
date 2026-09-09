@@ -5,15 +5,6 @@ enum class AppColorSource {
     CUSTOM_ACCENT,
 }
 
-/** Selectable full-palette themes. SIGNAL is the original/default and the safe baseline. */
-enum class PulseThemeId(val label: String, val tagline: String) {
-    SIGNAL("Signal", "Default — listening to the void"),
-    CRIMSON("Crimson", "Embers of a dying star"),
-    CYBERPUNK("Cyberpunk", "Neon grid"),
-    RONIN("Ronin", "Ink, blade, and autumn"),
-    ADASTRA("Ad Astra", "To the stars"),
-}
-
 enum class TileInteractionBehavior {
     SHOW_DIALOG,
     CYCLE_PROFILES,
@@ -91,7 +82,6 @@ enum class RgbStick(val label: String) {
 }
 
 data class AppSettings(
-    val themeId: PulseThemeId = PulseThemeId.SIGNAL,
     val colorSource: AppColorSource = AppColorSource.SYSTEM,
     val accentColor: Int = 0xFF3F51B5.toInt(),
     val tileTapBehavior: TileInteractionBehavior = TileInteractionBehavior.SHOW_DIALOG,
@@ -133,6 +123,8 @@ data class AppSettings(
     val autoTdpBias: AutoTdpBias = AutoTdpBias.EFFICIENT,
     // In-game overlay (OSD). Position is a TOP|START pixel offset; opacity is a 40–100 percent.
     val overlayEnabled: Boolean = false,
+    /** Repair the vendor's missed screen-off write so a plugged-in device always charges while the screen is off. */
+    val chargeWhileScreenOff: Boolean = true,
     /**
      * Quick Access Bar (EXPERIMENTAL, default OFF). A right-docked in-game panel to swap PULSE settings
      * live, à la the Steam Deck Quick Access menu. Opt-in only — nothing shows unless this is on.
