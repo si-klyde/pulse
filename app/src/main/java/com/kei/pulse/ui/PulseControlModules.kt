@@ -126,32 +126,26 @@ private fun TierCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val accent = if (tier == PowerTier.POWER_SAVING) {
-        MaterialTheme.colorScheme.secondary
-    } else {
-        MaterialTheme.colorScheme.primary
-    }
-    val container = if (selected) accent.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surfaceContainerHigh
-    val borderColor = if (selected) accent else MaterialTheme.colorScheme.outline
+    // Design vocabulary: hairline unselected, inverted ink selected. No per-tier colour.
     Surface(
-        color = container,
+        color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.surface,
         shape = MaterialTheme.shapes.large,
         modifier = modifier
-            .border(if (selected) 1.5.dp else 1.dp, borderColor, MaterialTheme.shapes.large)
+            .then(if (selected) Modifier else Modifier.border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.large))
             .clickable(onClick = onClick),
     ) {
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
             Text(
                 text = tier.label,
                 style = MaterialTheme.typography.titleMedium,
-                color = if (selected) accent else MaterialTheme.colorScheme.onSurface,
+                color = if (selected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = tier.tagline,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (selected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

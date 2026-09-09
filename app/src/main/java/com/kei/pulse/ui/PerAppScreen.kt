@@ -342,21 +342,24 @@ private fun PerAppConfigDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                DialogGroupLabel("Profile")
+                DialogGroupLabel("Power for this game")
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    DialogChip("None", profileBinding == null) { profileBinding = null }
-                    DialogChip("AutoTDP", PerAppConfig.isAuto(profileBinding)) {
+                    DialogChip("Follows Power", profileBinding == null) { profileBinding = null }
+                    DialogChip("Auto", PerAppConfig.isAuto(profileBinding)) {
                         profileBinding = PerAppConfig.AUTO_BINDING
+                    }
+                    DialogChip("Off · runs stock", PerAppConfig.isAutoOff(profileBinding)) {
+                        profileBinding = PerAppConfig.AUTO_OFF_BINDING
                     }
                     PowerTier.entries.forEach { tier ->
                         val binding = PerAppConfig.tierBinding(tier)
                         DialogChip(tier.label, profileBinding == binding) { profileBinding = binding }
                     }
                     profiles
-                        .filter { it.source != ProfileSource.VIRTUAL || it.id == ProfileStateResolver.STOCK_PROFILE_ID }
+                        .filter { it.source != ProfileSource.VIRTUAL }
                         .forEach { profile ->
                             DialogChip(profile.name, profileBinding == profile.id) {
                                 profileBinding = profile.id
@@ -368,7 +371,7 @@ private fun PerAppConfigDialog(
                 // fan picker is replaced by a note for it until the service layer supports per-app fan overrides
                 // during AutoTDP.
                 if (PerAppConfig.isAuto(profileBinding)) {
-                    DialogGroupLabel("FAN (ODIN)")
+                    DialogGroupLabel("Fan")
                     Text(
                         text = "Uses the global fan while AutoTDP tunes this app: a Custom fan keeps running " +
                             "(cascaded); Silent, Smart or Sport run as Smart.",
@@ -376,12 +379,12 @@ private fun PerAppConfigDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else {
-                    DialogGroupLabel("FAN (ODIN)")
+                    DialogGroupLabel("Fan")
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        DialogChip("Default", fanMode == null) { fanMode = null }
+                        DialogChip("Same as Power", fanMode == null) { fanMode = null }
                         FanController.MODES.forEach { mode ->
                             DialogChip(mode.label, fanMode == mode.value) { fanMode = mode.value }
                         }
@@ -391,7 +394,7 @@ private fun PerAppConfigDialog(
                 if (PerAppConfig.isAuto(profileBinding)) {
                     // AutoTDP owns the refresh rate (pins the panel to max), so the user picks an FPS
                     // target instead — AutoTDP trims clocks to hold it.
-                    DialogGroupLabel("FPS target")
+                    DialogGroupLabel("Frame rate to hold")
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -411,12 +414,12 @@ private fun PerAppConfigDialog(
                         DialogChip("On", aggressivePark) { aggressivePark = true }
                         DialogChip("Off", !aggressivePark) { aggressivePark = false }
                     }
-                    DialogGroupLabel("Efficiency")
+                    DialogGroupLabel("Lean towards")
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        DialogChip("Inherit", bias == null) { bias = null }
+                        DialogChip("Same as Power", bias == null) { bias = null }
                         AutoTdpBias.entries.forEach { b ->
                             DialogChip(b.label, bias == b) { bias = b }
                         }
@@ -427,7 +430,7 @@ private fun PerAppConfigDialog(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        DialogChip("Default", refreshRate == null) { refreshRate = null }
+                        DialogChip("Same as Power", refreshRate == null) { refreshRate = null }
                         listOf(60, 90, 120).forEach { hz ->
                             DialogChip("$hz Hz", refreshRate == hz) { refreshRate = hz }
                         }
@@ -479,34 +482,9 @@ private fun DialogGroupLabel(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.primary,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
 
 @Composable
-private fun DialogChip(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val accent = MaterialTheme.colorScheme.primary
-    Surface(
-        color = if (selected) accent.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier
-            .border(
-                1.dp,
-                if (selected) accent else MaterialTheme.colorScheme.outline,
-                MaterialTheme.shapes.medium,
-            )
-            .clickable(onClick = onClick),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleSmall,
-            color = if (selected) accent else MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-        )
-    }
-}
+private fun DialogChip(label: String, selected: Boolean, onClick: () -> Unit) = com.kei.pulse.ui.shell.Chip(label, selected, onClick)

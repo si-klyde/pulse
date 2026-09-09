@@ -741,7 +741,7 @@ private fun ProfileListRow(
     onMoveProfile: (Int) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val rowShape = MaterialTheme.shapes.extraLarge
+    val rowShape = MaterialTheme.shapes.large
     val containerColor = when {
         isApplied && isSelected -> colorScheme.primaryContainer
         isApplied -> colorScheme.primaryContainer
@@ -1028,7 +1028,7 @@ private fun ProfileEditorDialog(
             modifier = Modifier
                 .fillMaxWidth(0.8f)
                 .widthIn(max = 900.dp),
-            shape = MaterialTheme.shapes.extraLarge,
+            shape = MaterialTheme.shapes.large,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f),
             ),
@@ -1309,7 +1309,7 @@ private fun SectionCard(
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        shape = MaterialTheme.shapes.extraLarge,
+        shape = MaterialTheme.shapes.large,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
