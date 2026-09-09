@@ -66,7 +66,6 @@ import androidx.compose.ui.unit.dp
 import com.kei.pulse.model.AppColorSource
 import com.kei.pulse.model.OverlayElement
 import com.kei.pulse.model.OverlayPreset
-import com.kei.pulse.model.PulseThemeId
 import com.kei.pulse.model.RgbMode
 import com.kei.pulse.model.RgbStick
 import com.kei.pulse.ui.theme.HudBackground
@@ -93,7 +92,6 @@ fun SettingsScreen(
     onRgbManualTargetChange: (RgbStick) -> Unit = {},
     onRgbManualStickChange: (RgbStick, Int, Float) -> Unit = { _, _, _ -> },
     onColorSourceChange: (AppColorSource) -> Unit,
-    onThemeChange: (PulseThemeId) -> Unit,
     onAccentColorChange: (Int) -> Unit,
     onTileTapBehaviorChange: (TileInteractionBehavior) -> Unit,
     onApplyLastProfileOnBootChange: (Boolean) -> Unit,
@@ -191,10 +189,6 @@ fun SettingsScreen(
                     onCheckedChange = onPulseEnabledChange,
                 )
             }
-        }
-
-        SettingsSection(title = "Appearance") {
-            ThemeSelector(selected = settings.themeId, onSelect = onThemeChange)
         }
 
         SettingsSection(title = "Quick Settings Tile") {
@@ -1120,7 +1114,7 @@ private fun OverlayItemGroup(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
-            text = title.uppercase(),
+            text = title,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -1156,7 +1150,7 @@ private fun SettingsSection(
             .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.medium),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         ),
     ) {
         Column(
@@ -1166,7 +1160,7 @@ private fun SettingsSection(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
-                text = title.uppercase(),
+                text = title,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -1175,35 +1169,3 @@ private fun SettingsSection(
     }
 }
 
-@Composable
-private fun ThemeSelector(
-    selected: PulseThemeId,
-    onSelect: (PulseThemeId) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        PulseThemeId.entries.forEach { theme ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onSelect(theme) }
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                RadioButton(selected = selected == theme, onClick = { onSelect(theme) })
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = theme.label,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = theme.tagline,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-    }
-}

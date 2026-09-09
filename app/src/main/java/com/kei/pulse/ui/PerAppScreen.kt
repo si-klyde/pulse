@@ -234,13 +234,13 @@ private fun PerAppRow(
     val accent = MaterialTheme.colorScheme.primary
     Surface(
         color = if (configured) accent.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = RoundedCornerShape(14.dp),
+        shape = MaterialTheme.shapes.large,
         modifier = Modifier
             .fillMaxWidth()
             .border(
                 1.dp,
                 if (configured) accent else MaterialTheme.colorScheme.outline,
-                RoundedCornerShape(14.dp),
+                MaterialTheme.shapes.large,
             )
             .clickable(onClick = onClick),
     ) {
@@ -337,7 +337,7 @@ private fun PerAppConfigDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                DialogGroupLabel("PROFILE")
+                DialogGroupLabel("Profile")
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -377,7 +377,7 @@ private fun PerAppConfigDialog(
                 if (PerAppConfig.isAuto(profileBinding)) {
                     // AutoTDP owns the refresh rate (pins the panel to max), so the user picks an FPS
                     // target instead — AutoTDP trims clocks to hold it.
-                    DialogGroupLabel("FPS TARGET")
+                    DialogGroupLabel("FPS target")
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -389,7 +389,7 @@ private fun PerAppConfigDialog(
                         }
                     }
                     // Aggressive core parking is part of the AutoTDP algorithm, so it's set per app here.
-                    DialogGroupLabel("AGGRESSIVE PARK")
+                    DialogGroupLabel("Aggressive park")
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -397,7 +397,7 @@ private fun PerAppConfigDialog(
                         DialogChip("On", aggressivePark) { aggressivePark = true }
                         DialogChip("Off", !aggressivePark) { aggressivePark = false }
                     }
-                    DialogGroupLabel("EFFICIENCY")
+                    DialogGroupLabel("Efficiency")
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -408,7 +408,7 @@ private fun PerAppConfigDialog(
                         }
                     }
                 } else {
-                    DialogGroupLabel("REFRESH RATE")
+                    DialogGroupLabel("Refresh rate")
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -478,12 +478,12 @@ private fun DialogChip(
     val accent = MaterialTheme.colorScheme.primary
     Surface(
         color = if (selected) accent.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = RoundedCornerShape(10.dp),
+        shape = MaterialTheme.shapes.medium,
         modifier = Modifier
             .border(
                 1.dp,
                 if (selected) accent else MaterialTheme.colorScheme.outline,
-                RoundedCornerShape(10.dp),
+                MaterialTheme.shapes.medium,
             )
             .clickable(onClick = onClick),
     ) {

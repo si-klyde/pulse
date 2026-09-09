@@ -204,7 +204,7 @@ fun MainTunerScreen(
                     )
                 }
 
-                PulseSectionLabel("GLOBAL PERFORMANCE TIER")
+                PulseSectionLabel("Performance tier")
                 AutoTdpModule(
                     enabled = autoTdpEnabled,
                     onEnabledChange = onAutoTdpEnabledChange,
@@ -253,9 +253,9 @@ fun MainTunerScreen(
                 if (activeTier == PowerTier.CUSTOM && !autoTdpEnabled) {
                     PulseSectionLabel(
                         when {
-                            powerTargetEnabled && !powerTargetCpuOnly -> "MANUAL CONTROL · LOCKED BY POWER TARGET"
-                            powerTargetEnabled && powerTargetCpuOnly -> "MANUAL CONTROL · CPU LOCKED · GPU FREE"
-                            else -> "MANUAL CONTROL · CPU + GPU"
+                            powerTargetEnabled && !powerTargetCpuOnly -> "Manual control · locked by power target"
+                            powerTargetEnabled && powerTargetCpuOnly -> "Manual control · CPU locked, GPU free"
+                            else -> "Manual control"
                         },
                     )
                     state.policies.forEach { policy ->
@@ -294,7 +294,7 @@ fun MainTunerScreen(
 
                     CpuFloorModule(currentPercent = cpuFloorPercent, onSelect = onSelectCpuFloor)
 
-                    PulseSectionLabel("SAVED SETUPS")
+                    PulseSectionLabel("Saved setups")
                     ProfileListSection(
                         state = state,
                         sleepProfileId = sleepProfileId,
@@ -495,7 +495,7 @@ private fun ScreenContainer(
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .padding(horizontal = 12.dp, vertical = 12.dp),
-                shape = RoundedCornerShape(30.dp, 30.dp, 24.dp, 24.dp),
+                shape = MaterialTheme.shapes.extraLarge,
                 colors = CardDefaults.cardColors(
                     containerColor = colorScheme.surfaceColorAtElevation(4.dp),
                 ),
@@ -533,23 +533,14 @@ private fun Header(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "PUL",
-                            style = MaterialTheme.typography.displayMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            text = "SE",
-                            style = MaterialTheme.typography.displayMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
                     Text(
-                        text = "CLUSTER · GPU FREQUENCY CONTROL",
-                        style = MaterialTheme.typography.labelMedium,
+                        text = "PULSE",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = "CPU cluster and GPU frequency control",
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     PServerStatusChip(isLinked = state.isPServerAvailable && state.policies.isNotEmpty())
@@ -588,7 +579,7 @@ private fun PServerStatusChip(isLinked: Boolean) {
     val color = if (isLinked) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error
     Surface(
         color = color.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(999.dp),
+        shape = MaterialTheme.shapes.small,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
@@ -601,7 +592,7 @@ private fun PServerStatusChip(isLinked: Boolean) {
                     .background(color, CircleShape),
             )
             Text(
-                text = if (isLinked) "PSERVER · LINKED · NO-ROOT" else "PSERVER UNAVAILABLE",
+                text = if (isLinked) "PServer linked, no root needed" else "PServer unavailable",
                 style = MaterialTheme.typography.labelSmall,
                 color = color,
             )
@@ -653,7 +644,7 @@ private fun ProfileListSection(
 ) {
     SectionCard(
         title = null,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.72f),
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -742,7 +733,7 @@ private fun ProfileListRow(
     onMoveProfile: (Int) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val rowShape = RoundedCornerShape(20.dp)
+    val rowShape = MaterialTheme.shapes.extraLarge
     val containerColor = when {
         isApplied && isSelected -> colorScheme.primaryContainer
         isApplied -> colorScheme.primaryContainer
@@ -885,7 +876,7 @@ private fun ValuePreviewChips(
         values.toSortedMap().forEach { (policyId, value) ->
             Surface(
                 color = chipContainerColor,
-                shape = RoundedCornerShape(999.dp),
+                shape = MaterialTheme.shapes.small,
             ) {
                 val policy = policiesById[policyId]
                 Text(
@@ -1029,7 +1020,7 @@ private fun ProfileEditorDialog(
             modifier = Modifier
                 .fillMaxWidth(0.8f)
                 .widthIn(max = 900.dp),
-            shape = RoundedCornerShape(28.dp),
+            shape = MaterialTheme.shapes.extraLarge,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f),
             ),
@@ -1256,7 +1247,7 @@ private fun PolicyCard(
                 } else {
                     MaterialTheme.colorScheme.tertiaryContainer
                 },
-                shape = RoundedCornerShape(999.dp),
+                shape = MaterialTheme.shapes.small,
             ) {
                 Text(
                     text = "Current ${formatFrequency(actualValue, boosted = policy.isBoosted(actualValue))}",
@@ -1316,7 +1307,7 @@ private fun SectionCard(
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
