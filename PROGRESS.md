@@ -44,6 +44,27 @@ Result: 399 tests, 0 failures. `lintDebug` clean. Debug APK builds.
 | Reboot with Apply-on-boot + Fan + RGB, app never opened | Process up 4 s after boot, PServer acquired first try, tier caps + fan + RGB applied within 1 s |
 | Crashes | None from PULSE code |
 
+## Branch: `feat/quiet-instrument-theme` — DONE, on-device checked (RP6)
+
+Direction chosen 2026-09-09: **quiet instrument**. Flat dark surfaces, one accent, tabular numerals,
+thin rules, no motion. Scope: theme layer only; screen layouts untouched.
+
+### Changes
+
+| Commit | What |
+| --- | --- |
+| theme | Five animated backgrounds (`HudBackground.kt`, 751 lines, 30 Hz canvas on every screen) → flat housing colour. `PulseThemeId` enum, picker, DataStore key removed; custom-accent setting kept. |
+| theme | Palette: graphite housing `#1B1A18`, panel `#232220`, raised `#2B2A27`, rule `#3A3833`, ink `#ECE8E0` / `#A39E93`, accent glass blue `#8FB8CC`. Meter ramp sage `#7FB59A` → brass `#D9A441` → brick `#D96B5C`. |
+| theme | Type: IBM Plex Sans (OFL) for UI, Plex Mono for live readouts only, both `tnum`. Chakra Petch removed. Letter-spacing 0. Radii 2/4/6/8/12 dp. |
+| ui | Wordmark one colour; tagline + PServer chip sentence case; all section/telemetry/dialog labels sentence case; hardcoded radii → theme shapes; translucent cards solid; telemetry values in mono readout style. |
+
+Result: 399 tests, lint clean, APK builds, installed and screenshotted on RP6 (tuner, settings, scrolled).
+
+### Deferred (next styling pass)
+- Settings header still shows the `P.U.L.S.E.` acronym line (rename pending).
+- Overlay/OSD and Quick Access bar keep their own compact styling (`QaColors`, 10 sp caps labels).
+- App icon / launcher branding untouched until the name is decided.
+
 ## Pre-existing issues found (not caused by this fork; candidates for later branches)
 
 1. **Low-memory kills.** During a heavy game Android's LMK killed PULSE 6× in 14 s (RSS ~150–167 MB,
@@ -66,6 +87,7 @@ Result: 399 tests, 0 failures. `lintDebug` clean. Debug APK builds.
 ## Planned branches
 
 1. ~~`fix/root-exec-hardening`~~ — done.
+1b. ~~`feat/quiet-instrument-theme`~~ — done.
 2. `feat/ci-run-tests` — add `testDebugUnitTest lintDebug` to the workflow.
 3. `fix/rgb-original-capture` — issue 2 above.
 4. `perf/telemetry-direct-read` — issue 3 above (battery).
