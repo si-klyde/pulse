@@ -82,14 +82,22 @@ Done:
 - ViewModel: `telemetry` StateFlow (1 s), `drawHistory` (60 samples), `fanDuty` (2 s), all WhileSubscribed.
 - MainActivity: section state replaces the two screen booleans; Back returns to Power.
 
+Also done since:
+- Session recap in the header (`SessionRecorder`, `SessionStore`, `SessionFeed`, `GameSession`): live while a game runs,
+  else the last one; persisted every 30 samples; draw blanked while on external power (`PowerSource`).
+- Watcher fixes: start on app launch when anything needs it; incremental `ForegroundTracker` (6 h seed, then
+  events since last query, per-activity, same-ms de-dup) — fixes the blind spot after a low-memory kill mid-game.
+- Overlays (Phase C): OSD and Quick Access on smoke surfaces; Quick Access is one column (brightness/volume,
+  Power Auto|Manual|Off, Fan, Overlay, Lights), bumpers jump between groups; game name in the header.
+
 Next (in order):
-1. FPS into the header trace + readouts: the watcher's `FpsReader` samples live in the same process — publish
-   them through a process-wide flow the ViewModel can read (frame-time history, current fps, AutoTDP action).
-2. Overlays (Phase C): OSD on smoke surfaces at real sizes; Quick Access as one column (brightness/volume first,
-   Power, Fan, Overlay, Lights), no tab rail.
-3. Remaining Material widgets: RadioButton rows → Seg, Slider colours, per-app rows → hairline list with rule
+1. Release build with R8 (debug RSS ~180 MB is what gets PULSE killed under heavy games).
+2. Remaining Material widgets: RadioButton rows → Seg, Slider colours, per-app rows → hairline list with rule
    summary, `Per game · edit` sheet per the board, Lights section per board, System `About` copy.
-4. Tier cards in Manual → `OptionCard`; PolicyCard → slim slider rows.
+3. Tier cards in Manual → `OptionCard`; PolicyCard → slim slider rows.
+4. Charging separation (`is_charging_separation` / `percent_80_charge_limit` Settings.System keys, verified on RP6):
+   System → Charging group, Quick Access pill, optional "separate while gaming on power".
+5. Live AutoTDP action in the Power section header ("Holding · caps …") from `OverlayStats.autoTdp`.
 
 ## Pre-existing issues found (not caused by this fork; candidates for later branches)
 
