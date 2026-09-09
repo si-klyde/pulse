@@ -98,7 +98,7 @@ private fun Header(line1: String, line2: String, session: GameSession?) {
                 )
             }
             Row(
-                Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 8.dp),
+                Modifier.align(Alignment.TopStart).padding(start = 12.dp, top = 6.dp).background(Housing.copy(alpha = 0.9f)).padding(horizontal = 4.dp, vertical = 2.dp),
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 if (session == null) {
@@ -111,7 +111,7 @@ private fun Header(line1: String, line2: String, session: GameSession?) {
             }
             if (session != null) {
                 Row(
-                    Modifier.align(Alignment.TopEnd).padding(end = 16.dp, top = 6.dp),
+                    Modifier.align(Alignment.TopEnd).padding(end = 12.dp, top = 4.dp).background(Housing.copy(alpha = 0.9f)).padding(horizontal = 6.dp, vertical = 2.dp),
                     horizontalArrangement = Arrangement.spacedBy(18.dp),
                     verticalAlignment = Alignment.Bottom,
                 ) {
@@ -122,7 +122,7 @@ private fun Header(line1: String, line2: String, session: GameSession?) {
                     session.peakTempC?.let { BigReadout("$it", "° peak") }
                 }
                 Row(
-                    Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 8.dp),
+                    Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = 6.dp).background(Housing.copy(alpha = 0.9f)).padding(horizontal = 4.dp, vertical = 2.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     Text("— ${String.format(java.util.Locale.US, "%.1f", targetMs)} ms target", style = PulseTypography.labelSmall, color = Ink4)

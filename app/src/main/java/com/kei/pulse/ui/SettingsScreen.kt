@@ -39,15 +39,16 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.height
 import com.kei.pulse.ui.shell.PulseSwitch
+import com.kei.pulse.ui.shell.Seg
+import com.kei.pulse.ui.shell.Chip
+import com.kei.pulse.ui.shell.pulseSliderColors
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -178,14 +179,13 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        text = if (settings.pulseEnabled) "PULSE is active" else "System in control",
+                        text = if (settings.pulseEnabled) "PULSE is on" else "System in control",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = "Master switch. Turn OFF to hand every control back to manufacturer stock — " +
-                            "uncapped clocks, Smart fan, restored governor/refresh — and fully stop PULSE. " +
-                            "Do this before uninstalling for a clean device.",
+                        text = "Off hands every control back to the manufacturer defaults — uncapped clocks, Smart fan, " +
+                            "stock governor and refresh rate — and stops the background service. Turn it off before uninstalling.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -263,12 +263,12 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        text = "Apply last profile on device boot",
+                        text = "Re-apply manual clocks after a reboot",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = "When enabled, the app will attempt to restore the last applied profile after boot.",
+                        text = "Puts your last tier or Custom limits back as soon as the device boots, before PULSE is opened. Auto does not need this — it takes over whenever a game is in front.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -492,11 +492,7 @@ fun SettingsScreen(
             SettingsControlGroup(label = "Layout · density + quick-fill") {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OverlayPreset.entries.forEach { preset ->
-                        FilterChip(
-                            selected = overlayPreset == preset,
-                            onClick = { onOverlayPresetChange(preset) },
-                            label = { Text(preset.label) },
-                        )
+                        Chip(preset.label, overlayPreset == preset) { onOverlayPresetChange(preset) }
                     }
                 }
             }
@@ -518,6 +514,7 @@ fun SettingsScreen(
             }
             SettingsControlGroup(label = "Opacity · $overlayOpacity%") {
                 Slider(
+                    colors = pulseSliderColors(),
                     value = overlayOpacity.toFloat(),
                     onValueChange = { onOverlayOpacityChange(it.roundToInt()) },
                     valueRange = 40f..100f,
@@ -534,11 +531,7 @@ fun SettingsScreen(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 RgbMode.entries.forEach { mode ->
-                    FilterChip(
-                        selected = settings.rgbMode == mode,
-                        onClick = { onRgbModeChange(mode) },
-                        label = { Text(mode.label) },
-                    )
+                    Chip(mode.label, settings.rgbMode == mode) { onRgbModeChange(mode) }
                 }
             }
             if (settings.rgbMode == RgbMode.MANUAL) {
@@ -609,18 +602,18 @@ fun SettingsScreen(
         }
         if (show("About")) SettingsSection(title = "About") {
             Text(
-                text = "P.U.L.S.E.",
+                text = "PULSE",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
             )
             Text(
-                text = "Performance Utility for Load and System Efficiency",
+                text = "No-root CPU, GPU, fan and lighting control for the Retroid Pocket 6, AYN Odin 3 and AYN Thor. " +
+                    "Uses the device's own PServer service; never asks for root.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = "No-root CPU + GPU control for AYN Odin 3, AYN Thor and Retroid Pocket 6.",
+                text = "Fork of PULSE 1.19.6 by keiretrogaming · GPL v2 · credits in NOTICE.md",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -701,112 +694,20 @@ private fun SleepProfileSelector(
 }
 
 
-@Composable
-private fun ThemeModeOption(
-    title: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(
-            selected = selected,
-            onClick = onClick,
-        )
-        Column(
-            modifier = Modifier
-                .padding(start = 8.dp)
-                .weight(1f),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
-}
 
-@Composable
-private fun AccentSwatch(
-    color: Color,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .size(28.dp)
-            .background(color, CircleShape)
-            .border(
-                width = if (selected) 3.dp else 1.dp,
-                color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline,
-                shape = CircleShape,
-            )
-            .clickable(onClick = onClick),
-    )
-}
 
 @Composable
 private fun TileBehaviorSelector(
     selected: TileInteractionBehavior,
     onChange: (TileInteractionBehavior) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        TileBehaviorOption(
-            title = "Quick settings dialog",
-            selected = selected == TileInteractionBehavior.SHOW_DIALOG,
-            onClick = { onChange(TileInteractionBehavior.SHOW_DIALOG) },
-            modifier = Modifier.weight(1f),
-        )
-        TileBehaviorOption(
-            title = "Cycle profiles",
-            selected = selected == TileInteractionBehavior.CYCLE_PROFILES,
-            onClick = { onChange(TileInteractionBehavior.CYCLE_PROFILES) },
-            modifier = Modifier.weight(1f),
-        )
-        TileBehaviorOption(
-            title = "Open app",
-            selected = selected == TileInteractionBehavior.OPEN_APP,
-            onClick = { onChange(TileInteractionBehavior.OPEN_APP) },
-            modifier = Modifier.weight(1f),
-        )
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Seg("Quick dialog", selected == TileInteractionBehavior.SHOW_DIALOG, { onChange(TileInteractionBehavior.SHOW_DIALOG) }, height = 40)
+        Seg("Cycle profiles", selected == TileInteractionBehavior.CYCLE_PROFILES, { onChange(TileInteractionBehavior.CYCLE_PROFILES) }, height = 40)
+        Seg("Open app", selected == TileInteractionBehavior.OPEN_APP, { onChange(TileInteractionBehavior.OPEN_APP) }, height = 40)
     }
 }
 
-@Composable
-private fun TileBehaviorOption(
-    title: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(
-            selected = selected,
-            onClick = onClick,
-        )
-        Column(
-            modifier = Modifier
-                .padding(start = 4.dp)
-                .weight(1f),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
-}
 
 @Composable
 private fun ManualRgbControls(
@@ -840,11 +741,7 @@ private fun ManualRgbControls(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 RgbStick.entries.forEach { stick ->
-                    FilterChip(
-                        selected = target == stick,
-                        onClick = { onTargetChange(stick) },
-                        label = { Text(stick.label) },
-                    )
+                    Chip(stick.label, target == stick) { onTargetChange(stick) }
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1107,16 +1004,7 @@ private fun OverlayItemGroup(
         ) {
             items.forEach { (element, label) ->
                 val isOn = element in selected
-                FilterChip(
-                    selected = isOn,
-                    onClick = { onToggle(element, !isOn) },
-                    label = { Text(label) },
-                    leadingIcon = if (isOn) {
-                        { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                    } else {
-                        null
-                    },
-                )
+                Chip(label, isOn) { onToggle(element, !isOn) }
             }
         }
     }

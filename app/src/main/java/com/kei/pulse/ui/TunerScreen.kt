@@ -49,6 +49,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import com.kei.pulse.ui.shell.PulseSwitch
+import com.kei.pulse.ui.shell.pulseSliderColors
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
@@ -1278,6 +1279,7 @@ private fun PolicyCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Slider(
+                    colors = pulseSliderColors(),
                     value = currentIndex.toFloat(),
                     onValueChange = { raw ->
                         val index = raw.toInt().coerceIn(0, supported.lastIndex)
@@ -1286,13 +1288,6 @@ private fun PolicyCard(
                     valueRange = 0f..supported.lastIndex.toFloat(),
                     steps = (supported.size - 2).coerceAtLeast(0),
                     enabled = enabled,
-                    colors = SliderDefaults.colors(
-                        thumbColor = if (policy.isGpu) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
-                        activeTrackColor = if (policy.isGpu) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
-                        inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        activeTickColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
-                        inactiveTickColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f),
-                    ),
                     modifier = Modifier.weight(1f),
                 )
                 Text(

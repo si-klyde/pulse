@@ -31,6 +31,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import com.kei.pulse.ui.shell.PulseSwitch
+import com.kei.pulse.ui.shell.pulseSliderColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -347,6 +348,7 @@ fun FanCurveEditor(bindings: FanCurveEditorBindings, modifier: Modifier = Modifi
                     )
                 }
                 Slider(
+                    colors = pulseSliderColors(),
                     value = target,
                     onValueChange = { target = it },
                     onValueChangeFinished = { bindings.onTargetTempChange(target.roundToInt()) },
@@ -553,6 +555,7 @@ fun FanCurveEditor(bindings: FanCurveEditorBindings, modifier: Modifier = Modifi
                 )
             }
             Slider(
+                colors = pulseSliderColors(),
                 value = step,
                 onValueChange = { step = it },
                 onValueChangeFinished = { bindings.onResponseStepChange(step.roundToInt()) },
@@ -604,6 +607,7 @@ private fun VerticalSlider(
 ) {
     Box(modifier, contentAlignment = Alignment.Center) {
         Slider(
+            colors = pulseSliderColors(),
             value = value,
             onValueChange = onValueChange,
             onValueChangeFinished = onValueChangeFinished,
@@ -946,6 +950,7 @@ fun PowerTargetModule(
             }
             if (enabled) {
                 Slider(
+                    colors = pulseSliderColors(),
                     value = live,
                     onValueChange = { live = it },
                     onValueChangeFinished = { onPercentChange(live.toInt()) },

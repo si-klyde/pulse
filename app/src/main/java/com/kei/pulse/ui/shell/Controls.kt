@@ -126,6 +126,34 @@ fun PulseSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, modifie
     }
 }
 
+/** Intrinsic-width option chip for wrapping groups: hairline unselected, inverted ink selected. 36 dp tall. */
+@Composable
+fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .height(36.dp)
+            .then(if (selected) Modifier.background(Ink) else Modifier.border(1.dp, Rule2))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, style = if (selected) PulseTypography.titleSmall else PulseTypography.bodyMedium, color = if (selected) OnInk else Ink2, maxLines = 1)
+    }
+}
+
+/** Material Slider in the design's vocabulary: ink thumb and active track, hairline-grey inactive track, no ticks. */
+@Composable
+fun pulseSliderColors() = androidx.compose.material3.SliderDefaults.colors(
+    thumbColor = Ink,
+    activeTrackColor = Ink,
+    inactiveTrackColor = Rule2,
+    activeTickColor = androidx.compose.ui.graphics.Color.Transparent,
+    inactiveTickColor = Ink4,
+    disabledThumbColor = Ink4,
+    disabledActiveTrackColor = Ink4,
+    disabledInactiveTrackColor = Rule2,
+)
+
 /** Small caption line under a group of controls. */
 @Composable
 fun Note(text: String) {
