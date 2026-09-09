@@ -70,6 +70,8 @@ fun PerAppScreen(
     onSaveConfig: (PerAppConfig) -> Unit,
     onRemoveConfig: (String) -> Unit,
     onBack: () -> Unit,
+    /** Hosted in the rail shell: no page background, no title row. */
+    embedded: Boolean = false,
 ) {
     val context = LocalContext.current
     var apps by remember { mutableStateOf<List<InstalledApp>?>(null) }
@@ -106,10 +108,10 @@ fun PerAppScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 28.dp),
+                .padding(horizontal = if (embedded) 24.dp else 20.dp, vertical = if (embedded) 14.dp else 28.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Row(
+            if (!embedded) Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,

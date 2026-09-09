@@ -38,6 +38,7 @@ import com.kei.pulse.ui.theme.PulseTheme
 import com.kei.pulse.ui.shell.RailShell
 import com.kei.pulse.ui.shell.Section
 import com.kei.pulse.ui.sections.PowerSection
+import com.kei.pulse.ui.sections.FanSection
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -116,6 +117,26 @@ class MainActivity : ComponentActivity() {
                     val section = Section.entries[sectionOrdinal]
                     val telemetry = viewModel.telemetry.collectAsStateWithLifecycle().value
                     val drawHistory = viewModel.drawHistory.collectAsStateWithLifecycle().value
+                    val fanEditor = if (customFanSupported) {
+                        FanCurveEditorBindings(
+                            curve = settings.fanCurve,
+                            responseStep = settings.fanResponseStep,
+                            bias = settings.fanBias,
+                            smartEnabled = settings.fanSmartEnabled,
+                            targetTempC = settings.fanTargetTempC,
+                            calibrating = fanCalibrating,
+                            onCurveChange = ::onFanCurveChanged,
+                            onResponseStepChange = ::onFanResponseStepChanged,
+                            onBiasChange = ::onFanBiasChanged,
+                            onSmartToggle = ::onFanSmartToggled,
+                            onTargetTempChange = ::onFanTargetTempChanged,
+                            onAutocalibrate = ::onAutocalibrateFan,
+                            readTelemetry = viewModel::readTelemetry,
+                            readFanDutyPercent = viewModel::readFanDutyPercent,
+                        )
+                    } else {
+                        null
+                    }
                     val perAppEnabled = viewModel.perAppEnabled.collectAsStateWithLifecycle().value
                     val perAppConfigs = viewModel.perAppConfigs.collectAsStateWithLifecycle().value
                     val perAppSwitchNotices = viewModel.perAppSwitchNotices.collectAsStateWithLifecycle().value
@@ -160,11 +181,18 @@ class MainActivity : ComponentActivity() {
                             defaultAggressivePark = autoTdpAggressivePark,
                             onSaveConfig = ::onSavePerAppConfig,
                             onRemoveConfig = viewModel::removePerAppConfig,
+                            embedded = true,
                             onBack = { sectionOrdinal = Section.POWER.ordinal },
                         )
                     }
                     Section.OVERLAY, Section.LIGHTS, Section.SYSTEM -> {
                         SettingsScreen(
+                            embedded = true,
+                            only = when (section) {
+                                Section.OVERLAY -> setOf("On-screen overlay")
+                                Section.LIGHTS -> setOf("Joystick RGB")
+                                else -> setOf("PULSE", "Quick Settings Tile", "Startup", "Sleep", "Per-app profiles", "Profiles", "About")
+                            },
                             settings = settings,
                             onBack = { sectionOrdinal = Section.POWER.ordinal },
                             onPulseEnabledChange = ::onPulseMasterToggle,
@@ -225,8 +253,17 @@ class MainActivity : ComponentActivity() {
                             capturingCombo = viewModel.capturingCombo.collectAsStateWithLifecycle().value,
                         )
                     }
-                    Section.POWER, Section.FAN -> {
-                        val hostManual = section == Section.POWER
+                    Section.FAN -> {
+                        FanSection(
+                            currentMode = fanMode,
+                            onSelectMode = ::onFanModeSelected,
+                            editor = fanEditor,
+                            autoOn = autoTdpEnabled,
+                            liveDutyPercent = null,
+                        )
+                    }
+                    Section.POWER -> {
+                        val hostManual = true
                         val tuner: @Composable () -> Unit = {
                         MainTunerScreen(
                             embedded = true,
@@ -250,26 +287,7 @@ class MainActivity : ComponentActivity() {
                             onErrorMessageShown = viewModel::consumeErrorMessage,
                             activeTier = activeTier,
                             fanMode = fanMode,
-                            fanCurveEditor = if (customFanSupported) {
-                                FanCurveEditorBindings(
-                                    curve = settings.fanCurve,
-                                    responseStep = settings.fanResponseStep,
-                                    bias = settings.fanBias,
-                                    smartEnabled = settings.fanSmartEnabled,
-                                    targetTempC = settings.fanTargetTempC,
-                                    calibrating = fanCalibrating,
-                                    onCurveChange = ::onFanCurveChanged,
-                                    onResponseStepChange = ::onFanResponseStepChanged,
-                                    onBiasChange = ::onFanBiasChanged,
-                                    onSmartToggle = ::onFanSmartToggled,
-                                    onTargetTempChange = ::onFanTargetTempChanged,
-                                    onAutocalibrate = ::onAutocalibrateFan,
-                                    readTelemetry = viewModel::readTelemetry,
-                                    readFanDutyPercent = viewModel::readFanDutyPercent,
-                                )
-                            } else {
-                                null
-                            },
+                            fanCurveEditor = fanEditor,
                             nativeDisplay = nativeDisplay,
                             resolutionScale = resolutionScale,
                             onSelectTier = { tier ->

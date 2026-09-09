@@ -123,8 +123,13 @@ fun SettingsScreen(
     onSetQuickAccessCombo: () -> Unit = {},
     onClearQuickAccessCombo: () -> Unit = {},
     capturingCombo: Boolean = false,
+    /** Hosted in the rail shell: no page background, no title row. */
+    embedded: Boolean = false,
+    /** When set, only sections whose title is listed render (the rail splits Settings into Overlay / Lights / System). */
+    only: Set<String>? = null,
 ) {
     var showResetConfirmation by remember { mutableStateOf(false) }
+    val show: (String) -> Boolean = { only == null || it in only }
 
     HudBackground(modifier = Modifier.fillMaxSize()) {
     Column(
@@ -132,10 +137,10 @@ fun SettingsScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .navigationBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 28.dp),
+            .padding(horizontal = if (embedded) 24.dp else 20.dp, vertical = if (embedded) 14.dp else 28.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        Row(
+        if (!embedded) Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
@@ -162,7 +167,7 @@ fun SettingsScreen(
             }
         }
 
-        SettingsSection(title = "PULSE") {
+        if (show("PULSE")) SettingsSection(title = "PULSE") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -191,7 +196,7 @@ fun SettingsScreen(
             }
         }
 
-        SettingsSection(title = "Quick Settings Tile") {
+        if (show("Quick Settings Tile")) SettingsSection(title = "Quick Settings Tile") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -223,7 +228,7 @@ fun SettingsScreen(
             }
         }
 
-        SettingsSection(title = "Startup") {
+        if (show("Startup")) SettingsSection(title = "Startup") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -250,7 +255,7 @@ fun SettingsScreen(
             }
         }
 
-        SettingsSection(title = "Sleep") {
+        if (show("Sleep")) SettingsSection(title = "Sleep") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -293,7 +298,7 @@ fun SettingsScreen(
             }
         }
 
-        SettingsSection(title = "Per-app profiles") {
+        if (show("Per-app profiles")) SettingsSection(title = "Per-app profiles") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -362,7 +367,7 @@ fun SettingsScreen(
             }
         }
 
-        SettingsSection(title = "On-screen overlay") {
+        if (show("On-screen overlay")) SettingsSection(title = "On-screen overlay") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -496,7 +501,7 @@ fun SettingsScreen(
             }
         }
 
-        SettingsSection(title = "Joystick RGB") {
+        if (show("Joystick RGB")) SettingsSection(title = "Joystick RGB") {
             Text(
                 text = "Color the controller's joystick LEDs. Battery and Heat glow with device status; " +
                     "Manual sets your own color per stick. Turn the lights on in your system settings to see them.",
@@ -521,7 +526,7 @@ fun SettingsScreen(
             }
         }
 
-        SettingsSection(title = "Profiles") {
+        if (show("Profiles")) SettingsSection(title = "Profiles") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -578,7 +583,7 @@ fun SettingsScreen(
                 }
             }
         }
-        SettingsSection(title = "About") {
+        if (show("About")) SettingsSection(title = "About") {
             Text(
                 text = "P.U.L.S.E.",
                 style = MaterialTheme.typography.titleMedium,
