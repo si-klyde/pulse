@@ -115,11 +115,27 @@ reflection and runs short shell scripts through it as root to write protected sy
 technique ClusterTune pioneered. Every string that reaches that shell is quoted; every script is written
 and executed under one lock.
 
-## Development and AI assistance
+## AI use during development
 
-Like upstream, this fork is developed with substantial help from an AI coding assistant (Anthropic's
-Claude), under the maintainer's direction and review. Every change is built, unit-tested and verified on
-a Retroid Pocket 6 before it is committed. This is disclosed so you can judge the code accordingly.
+This fork is developed with substantial help from an AI coding assistant (Anthropic's Claude), directed and
+reviewed by the maintainer. Upstream PULSE disclosed the same, and so does this fork, so you can judge the
+code with that in mind.
+
+What that means in practice:
+
+- **The AI writes most of the code and the first draft of the words.** The maintainer decides what gets
+  built, reviews every diff, and owns every commit. Nothing lands because the assistant said it works.
+- **Every change is tested before it is committed.** Logic is written test-first where it can be isolated
+  from Android (the charging guard, foreground tracking, the session model, the root command layer), and
+  the full unit suite plus lint runs on each build. CI runs the same suite on every push.
+- **Every change is validated on an actual Retroid Pocket 6.** Not an emulator, not a screenshot of a
+  mockup: the app is installed on the device, the affected feature is exercised, and the result is read
+  back from the hardware — sysfs nodes, `logcat`, the vendor's own settings — before the change is
+  considered done. Where a fix claims to survive something (a low-memory kill, a reboot, a plug-in while
+  asleep), that scenario was reproduced on the device. `PROGRESS.md` records what was verified and how.
+- **Limits, stated plainly.** Only the RP6 has been used for verification since the fork. Other devices
+  that share the PServer service may work but are unverified here. Bugs can still slip through; if you
+  find one, the useful report is what you did, what you saw, and a `logcat` capture of the `Pulse*` tags.
 
 ## License
 

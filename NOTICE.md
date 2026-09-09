@@ -32,8 +32,10 @@ Please report problems with this fork here, not to the upstream project.
   Font License 1.1. Full license texts are in `licenses/OFL-BricolageGrotesque.txt` and
   `licenses/OFL-AzeretMono.txt`.
 
-## AI assistance disclosure
+## AI use during development
 
 Upstream PULSE was built with AI assistance and said so. This fork is too: an AI coding assistant
-(Anthropic's Claude) wrote a large share of the changes under the maintainer's direction and review.
-Every change is built, unit-tested and verified on a Retroid Pocket 6 before it is committed.
+(Anthropic's Claude) wrote a large share of the changes under the maintainer's direction and review. Every
+change is built, unit-tested and lint-checked, and every feature and fix is validated on an actual Retroid
+Pocket 6 — installed, exercised, and read back from the hardware — before it is committed. What was
+verified, and how, is recorded in `PROGRESS.md`.
