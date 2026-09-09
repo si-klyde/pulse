@@ -1,9 +1,10 @@
-name: Build PULSE APK
+name: Build and test
 
-# Builds a debug APK in the cloud and attaches it to the run as a download.
-# Runs on every push, and can be triggered manually from the Actions tab.
+# Runs the unit tests and lint, then builds a debug APK and attaches it to the run.
 on:
   push:
+    branches: ['**']
+  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -24,8 +25,24 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest --no-daemon --stacktrace
+
+      - name: Lint
+        run: ./gradlew lintDebug --no-daemon --stacktrace
+
       - name: Build debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Upload test and lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            app/build/reports/tests/testDebugUnitTest
+            app/build/reports/lint-results-debug.html
+          if-no-files-found: ignore
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

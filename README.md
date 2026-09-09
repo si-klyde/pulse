@@ -1,321 +1,135 @@
 <div align="center">
 
-# P.U.L.S.E.
+# PULSE · Retroid Pocket 6 fork
 
-### Performance Utility for Load and System Efficiency
+*A no-root performance tuner for the Retroid Pocket 6, rebuilt around how the handheld is actually used.*
 
-*A no-root performance tuner for handheld gaming devices — give your handheld a brain.*
-
-![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/keiretrogaming/pulse/total)
-![GitHub Release](https://img.shields.io/github/v/release/keiretrogaming/pulse)
 ![Android](https://img.shields.io/badge/Android-12%2B-3DDC84?logo=android&logoColor=white)
 ![No root required](https://img.shields.io/badge/root-not%20required-brightgreen)
 ![License](https://img.shields.io/badge/license-GPL%20v2.0-blue)
 
-<img src="docs/screenshots/hero.png" alt="PULSE main screen" width="720">
+<img src="docs/screenshots/fork/power-auto.png" alt="PULSE home: Power section in Auto mode with the session recap trace" width="720">
 
 </div>
 
----
+> **This is a fork.** The original **PULSE** is by [keiretrogaming](https://github.com/keiretrogaming/pulse).
+> Everything that makes this app possible — the no-root PServer technique, AutoTDP, the closed-loop fan,
+> the per-game engine — is their work and the work of the projects they built on. This fork is a
+> redesign and a hardening pass on top of it, aimed at one device. If you have an AYN Odin 3 or Thor,
+> or you want the original's five themes and broader device tuning, use upstream. Bugs in this fork are
+> mine; report them here, not to upstream.
 
-> [!NOTE]
-> **This is a fork** of [keiretrogaming/pulse](https://github.com/keiretrogaming/pulse) (upstream v1.19.6).
-> It is not the official PULSE. Changes are tracked in [PROGRESS.md](PROGRESS.md). Builds from this repo are
-> signed with a different key, so installing one requires uninstalling the upstream APK first (export your
-> profiles before you do). Bugs in this fork go here, not to the upstream tracker.
+## Dedication
 
-## What is PULSE?
+To **keiretrogaming**, for building PULSE in the open and disclosing honestly how it was made, and to the
+chain of people before them — **AurelioB** (ClusterTune), **FeralAI** (O2P Tweaks), **TheOldTaylor**, and
+the r/OdinHandheld community who first worked out how to drive these handhelds without rooting them.
+None of this exists without that lineage. Full credits are in [NOTICE.md](NOTICE.md), and they stay in
+every copy of this fork, as the GPL asks and as decency requires.
 
-I kept wanting two things from my handheld that felt mutually exclusive: **good, sustained frame rates** and **a battery that lasts (and a fan that isn't screaming).** Stock firmware gives you a couple of blunt "performance modes" and calls it a day. I wanted a knob for everything — and something smart enough to turn those knobs for me, per game, in real time.
+## What this fork changes
 
-So I built **PULSE**.
+**Design.** One fixed screen built for the RP6's 5.5″ AMOLED in landscape, held by the grips, touch and
+controller alike. True black housing (off pixels cost nothing on OLED), white ink at three levels, and
+colour only where it means something — temperature, load, battery. Two typefaces: Bricolage Grotesque
+for words, Azeret Mono for every live number so digits never jitter.
 
-It is a per-cluster CPU/GPU tuner, a closed-loop **AutoTDP** controller that holds a target frame rate at the minimum power it can get away with, a closed-loop **Custom fan** controller, a live telemetry **HUD/OSD**, and joystick **RGB** control — and it does all of it **without Magisk and without user-granted root**. It drives the device's own built-in `PServer` service to write the protected sysfs nodes, the same no-root technique pioneered by ClusterTune (see [Attribution](#license--attribution)).
+**Grouping.** A rail of six destinations, ordered by how often you touch them:
 
-If your device ships that service, PULSE just works. If it does not, PULSE tells you it is incompatible and never asks you to root anything.
+| Rail | What lives there |
+| --- | --- |
+| **Power** | Auto \| Manual. Auto is AutoTDP: frame rate to hold, lean (Efficient / Balanced / Smooth), aggressive park, refresh rate. Manual is tiers, per-cluster and GPU ceilings, power target, saved setups. |
+| **Fan** | Silent / Smart / Sport / Custom, the closed-loop hold-target controller, the curve editor. Says plainly that only Custom keeps running while Auto tunes a game. |
+| **Per game** | Games with their own rules, each summarised in one line. Tap to edit: Follows Power / Auto / Off · runs stock / a tier / a saved setup, plus frame rate, lean, fan, refresh. |
+| **Overlay** | The in-game performance overlay (three layouts, 15 items) and the Quick Access bar. |
+| **Lights** | Joystick RGB: Off / Battery / Heat / Manual with plain hue and brightness strips. |
+| **System** | Master switch, **Charging**, Quick Settings tile, startup, sleep, profiles, about. |
 
-## Supported devices
+**Session recap.** The header shows the game session that matters: live while a game runs, otherwise
+the last one — name, duration, share of frames at target, average draw, peak temperature, and the whole
+session's frame time over power draw as a trace. It survives the app being killed mid-game.
 
-| Device | SoC | `ro.soc.model` | GPU | Android |
-| --- | --- | --- | --- | --- |
-| **AYN Odin 3** | Qualcomm Dragonwing Q8 | `CQ8725S` | Adreno 830 | 15 |
-| **AYN Thor** (Base / Pro / Max) | Snapdragon 8 Gen 2 | `QCS8550` | Adreno 740 | 13 |
-| **Retroid Pocket 6** | Snapdragon 8 Gen 2 | `QCS8550` | Adreno 740 | 13 |
+**Charging.** The RP6's charging separation is driven by the vendor's Settings app, and it sometimes
+misses the screen-off write (after plugging in while asleep, or after low memory), leaving the battery
+bypassed all night. PULSE now checks once a minute while the screen is off and re-enables charging if
+needed. It never touches anything while the screen is on. The vendor's separation and 80 % limit toggles
+are exposed alongside it.
 
-> PULSE reads each device's clusters, per-core frequency ranges, and GPU power levels live from sysfs at runtime, so it adapts to whatever the hardware exposes. Other AYN and Retroid handhelds with a `PServerBinder` service may work — but the three above are what it is tuned and hardware-tested on.
+**Overlays.** The performance overlay and Quick Access bar sit on a smoke surface the game reads through,
+at the app's original dimensions. Quick Access is one column — brightness and volume first, then Power,
+Fan, Overlay, Lights — with the bumpers jumping between groups.
+
+## Fixes over upstream 1.19.6
+
+These are real bugs found while working on the fork; each has a unit test and was verified on hardware.
+
+- **Root layer.** Concurrent applies could execute each other's script (fixed-name script written outside
+  the lock). Values read back from `Settings.System` were interpolated into a root shell unquoted — any app
+  with `WRITE_SETTINGS` could have run commands as root through the RGB restore path. The PServer binder
+  was looked up per command and its absence latched forever at boot.
+- **Watcher blind after a restart.** Foreground detection read only the last 10 s of usage events, so after
+  a low-memory kill mid-game the watcher came back but never re-engaged AutoTDP or the overlays until the
+  next app switch. Replaced with an incremental per-activity tracker seeded from a long lookback.
+- **Watcher not started on launch.** Opening the app only started the watcher when per-game rules existed;
+  a force-stop left overlays, Auto and the fan dead until a toggle was flipped.
+- **Wattage while plugged in.** The firmware reports `Discharging` on AC with 0 mA, so draw read as 0.1 W.
+  Draw is now blanked while on external power and the live column says "charging".
+- **Fan copy.** The UI claimed the fan "stays adjustable" under AutoTDP; only Custom is honoured. The
+  Fan section, per-game dialog and Quick Access now say so.
+
+The full log, with what was verified on the device, is in [PROGRESS.md](PROGRESS.md).
+
+## Supported device
+
+Tuned and tested on the **Retroid Pocket 6** (Snapdragon 8 Gen 2, `QCS8550`, Android 13). The AYN Odin 3
+and Thor share the PServer service and should work, but nothing here has been checked on them since the
+fork; upstream is the safer choice for those.
 
 > [!WARNING]
-> **PULSE changes CPU and GPU frequency limits.** That affects stability, thermals, battery life, and performance, and is **not guaranteed safe for your hardware.** Use it only if you understand what frequency limits do and accept the risk. The device's own kernel thermal limiter always stays in charge underneath PULSE, but you are still the one turning the dials.
-
----
-
-## Features
-
-### AutoTDP — the brain
-
-This is the headline. **AutoTDP is a closed-loop controller that auto-tunes your CPU and GPU clocks, in real time, to hold a target FPS at the lowest power possible.** Point it at a game, give it a target (e.g. 60), and it does the rest — trimming clocks while frames are smooth, giving them back the instant a scene gets heavy, and learning each game's floor as it goes.
-
-It has an efficiency-to-smoothness bias with three modes, set globally or per-app:
-
-| Mode | What it prioritises | On the Odin it caps draw at... |
-| --- | --- | --- |
-| **Efficient** | Lowest power, quietest, coolest | ~11 W |
-| **Balanced** | A sensible middle | ~12.5 W |
-| **Smooth** | Best frames, holds clocks higher | ~14 W |
-
-The watt number is a **ceiling, not a target.** AutoTDP always uses the least power it can to hold your frame rate — on a light game it sits far below the cap; it only climbs toward the cap when a game genuinely demands it, and never crosses it (so a tiny chassis cannot cook itself chasing frames it cannot sustain).
-
-<details>
-<summary><b>Guide: getting the most out of AutoTDP</b></summary>
-
-<br>
-
-<div align="center"><img src="docs/screenshots/autotdp.png" alt="AutoTDP panel" width="640"></div>
-
-- **Turn it on, pick an FPS target, play.** With no per-app setup, AutoTDP becomes the default for any foreground game.
-- **Pick a mode for the moment:** *Efficient* for long battery sessions and emulators, *Smooth* for a demanding title where you want every frame, *Balanced* when you are not sure.
-- **Per-app overrides win.** Set a different mode (or target) for a specific game and PULSE remembers it.
-- **Honest expectations:** a genuinely heavy AAA title on a small handheld is bound by physics — if one CPU core is pegged and cannot clock higher, no tuner can conjure 60 fps out of it. What AutoTDP does is hold the best achievable frame rate cool and efficient instead of hot, loud, and thrashing. It knows when a target is unreachable and stops burning power chasing it.
-- **Fan tip:** pair AutoTDP with the **Custom fan** below. AutoTDP holds the temperature with clocks; your tuned fan curve handles the rest, quietly.
-
-</details>
-
-### Custom fan (closed-loop)
-
-PULSE drives the fan controller directly, two ways via a single **Hold Target Temp** toggle:
-
-- **Hold Target Temp (Smart)** — a PI controller holds the SoC at a temperature you pick, using the minimum fan speed needed. Quiet when it can be, full when it must be.
-- **Manual curve** — an EVGA-style temperature-to-fan-% spline with draggable knees, a Cooler-to-Quieter bias slider, and an Auto-Calibrate sweep that learns your fan's real range.
-
-It runs everywhere — on the Android UI, in games, and during AutoTDP — so your handheld never reverts to a loud stock fan profile the moment you tab out of a game.
-
-<details>
-<summary><b>Guide: tuning the fan</b></summary>
-
-<br>
-
-<div align="center"><img src="docs/screenshots/fan.png" alt="Custom fan panel" width="640"></div>
-
-- **Most people want Hold Target Temp.** Set a target (e.g. 78-80 C) and forget it — the PI controller keeps the chip there with as little fan as possible.
-- **Keep the fan target at or above your AutoTDP mode's comfort point.** When AutoTDP is cooling with clocks, a slightly higher fan target lets the fan idle — quietest combo.
-- **Prefer a manual curve?** Flip Hold Target Temp off, drag the knees, and use Cooler-to-Quieter to bias the whole curve without redrawing it. Run **Auto-Calibrate** once so the curve maps to your fan's actual duty range.
-- **Physics, again:** under a heavy load these chips can run 88-94 C even at 100% fan. No curve makes a genuinely hot chip silent — but a good one keeps it quiet every other moment.
-
-</details>
-
-### Manual control — clocks, tiers and Power Target
-
-When you want to drive it yourself:
-
-- **Per-cluster CPU caps** — one slider per cpufreq policy, snapped to the device's real available frequencies.
-- **GPU cap** — set via the Adreno power-level index (the lever the GPU governor actually honours).
-- **CPU and GPU floors** — hold either side above a chosen share of its max for steadier frame pacing.
-- **Prime-core boost limit** — cap just the prime cluster below its turbo bin to shed heat without touching the other cores.
-- **Four power tiers** — AAA/Max, Balanced, Power Saving, and Custom. Snapdragon has no programmable wattage cap, so each tier is a power envelope built from CPU + GPU caps, snapped to each device's real OPPs.
-- **Power Target** — a single TDP-style master slider that scales every CPU cluster and the GPU ceiling together (with an optional CPU-only mode).
-- **Display** — render-scale (drop resolution for GPU headroom, fully reversible) and refresh-rate select.
-
-### Live telemetry — HUD and in-game OSD
-
-Real-time CPU/GPU clocks, GPU load, battery, CPU/GPU temperatures, power draw, and a self-calibrating peak-draw estimate — every reading colour-coded from cool to hot. Flip on the **OSD overlay** and the stats (plus live **FPS** and a smoothed **battery-remaining** estimate) float over any game.
-
-<div align="center"><img src="docs/screenshots/hud.png" alt="Telemetry HUD" width="640"></div>
-
-### Joystick RGB
-
-Drive the joystick LEDs three ways: a dim **Battery** info-LED, a **Heat** info-LED that tracks SoC temperature, or a **Manual** per-stick colour picker. Brightness control included.
-
-<div align="center"><img src="docs/screenshots/rgb.png" alt="Joystick RGB picker" width="640"></div>
-
-### Profiles and automation
-
-Save, edit, delete, reorder, import, and export profiles. Reapply-on-boot, sleep-aware profile switching, and a Quick Settings tile that can cycle power tiers, open a quick dialog, or launch the app.
-
-<!-- Screenshots welcome here: the profile editor and the Quick Settings tile dialog. -->
-
-### Five animated themes
-
-**Signal** (default), **Crimson**, **Cyberpunk**, **Ronin**, and **Ad Astra** — all near-black and OLED-friendly, each with its own procedurally-generated, animated background (pure Compose canvas — no shaders, no bitmaps).
-
-<details>
-<summary>What each theme looks like</summary>
-
-<br>
-
-<div align="center"><img src="docs/screenshots/themes.png" alt="PULSE themes" width="640"></div>
-
-- **Signal / Crimson** — a drifting constellation telemetry field with travelling pulse rings.
-- **Cyberpunk** — a neon perspective grid with a CRT scanline sweep.
-- **Ronin** — a sumi-e ink wash: a brushed red sun, ink splotches, falling autumn leaves.
-- **Ad Astra** — a tilted accretion disk whose colour temperature tracks the active power tier (icy when idle, igniting to amber at max).
-
-</details>
-
----
-
-## Install and first run
-
-1. **Download the latest APK** from the [Releases](https://github.com/keiretrogaming/pulse/releases) page and install it (you may need to allow "install from unknown sources").
-2. **Grant two permissions** the first time PULSE asks:
-   - **Usage Access** — so PULSE can tell which game is in the foreground (for per-app profiles and AutoTDP).
-   - **Display over other apps** — so the OSD overlay can draw over games.
-3. **That is it — no root prompt, ever.** If your device lacks the `PServerBinder` service, PULSE will tell you it is incompatible instead.
-
-Requires Android 12+ (`minSdk 31`).
-
-### Quick start (your first 5 minutes)
-
-1. Open PULSE — the HUD shows your live clocks, temps, and draw.
-2. Flip on **AutoTDP**, set a target of **60**, and leave the mode on **Efficient**.
-3. (Optional) Set the fan to **Custom -> Hold Target Temp** at ~80 C.
-4. Launch a game. PULSE tunes it automatically in the background.
-5. Want every frame in a heavy title? Switch that game's AutoTDP mode to **Smooth**.
-
----
-
-## Settings reference
-
-<!-- Screenshot welcome here: the settings screen. -->
-
-<details>
-<summary><b>AutoTDP settings</b></summary>
-
-- **Enable AutoTDP** — turns the closed-loop controller on as the default for foreground games.
-- **FPS target** — the rate to hold (options depend on the device's panel).
-- **Efficiency mode** — Efficient / Balanced / Smooth (the watt-ceiling and responsiveness trade described above). Each mode's sustained power cap is shown right on its chip.
-- **Per-app** — give a specific game its own mode/target; per-app always wins over the global setting.
-
-</details>
-
-<details>
-<summary><b>Fan settings</b></summary>
-
-- **Fan mode** — Silent / Smart / Sport (stock vendor modes) or **Custom** (PULSE drives it).
-- **Hold Target Temp** — on = PI controller to a target temp; off = manual spline curve.
-- **Target temp** — the temperature the PI controller holds.
-- **Curve editor** — drag the knees; Cooler-to-Quieter biases the whole curve; Auto-Calibrate learns the fan's range.
-- **Response** — how aggressively the fan ramps toward its goal.
-
-</details>
-
-<details>
-<summary><b>Manual performance settings</b></summary>
-
-- **Power tier** — AAA/Max, Balanced, Power Saving, Custom.
-- **Power Target** — master slider scaling all clusters + GPU together (CPU-only mode optional).
-- **Per-cluster CPU caps / GPU cap / floors / prime-boost limit** — fine-grained manual control.
-- **Governor** — Performance / Balanced / Power Save.
-- **Render scale / refresh rate** — display levers.
-
-</details>
-
-<details>
-<summary><b>Overlay (OSD) settings</b></summary>
-
-- **Enable overlay** — float the telemetry stats over games (needs Display-over-apps permission).
-- **Elements** — pick which readouts show (FPS, clocks, temps, draw, battery-remaining, session timer, etc.).
-- The OSD shows over any game and hides automatically over PULSE itself, the home screen, and Android UI.
-
-</details>
-
-<details>
-<summary><b>RGB, profiles and automation</b></summary>
-
-- **RGB mode** — Battery info-LED / Heat info-LED / Manual per-stick colour + brightness.
-- **Profiles** — save / edit / delete / reorder / import / export.
-- **Automation** — reapply-on-boot, sleep-aware switching, Quick Settings tile behaviour.
-- **Theme** — Signal / Crimson / Cyberpunk / Ronin / Ad Astra.
-
-</details>
-
----
+> PULSE changes CPU and GPU frequency limits and drives the fan and charger. That affects stability,
+> thermals and battery life. The kernel's thermal limiter stays in charge underneath, but you are turning
+> the dials. Use it only if you understand what these controls do.
+
+## Install
+
+1. Download the APK from this repository's Releases.
+2. Builds from this fork are signed with a different key from upstream. If upstream PULSE is installed,
+   export your profiles, uninstall it, then install this one.
+3. Grant **Usage access** (to know which game is in front) and **Display over other apps** (for the
+   overlay) when asked. Nothing asks for root; if the device lacks the PServer service, PULSE says so.
+
+## Build
+
+```bash
+./gradlew testDebugUnitTest lintDebug assembleDebug
+```
+
+JDK 17, Android SDK 34. The debug APK lands in `app/build/outputs/apk/debug/`. Signing for release comes
+from `ANDROID_KEYSTORE_*` environment variables or `local.properties`. Contributions: see
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## How the no-root mechanism works
 
-These devices ship a privileged system service (`PServerBinder`) in their stock firmware. PULSE obtains it via reflection and runs a short shell script through it as root — no Magisk, no granted root, nothing for you to unlock:
-
-```sh
-# CPU cluster - write the chosen frequency (kHz) to scaling_max_freq
-chmod 666 /sys/devices/system/cpu/cpufreq/policy0/scaling_max_freq
-echo 2745600 > /sys/devices/system/cpu/cpufreq/policy0/scaling_max_freq   # kHz
-chmod 444 /sys/devices/system/cpu/cpufreq/policy0/scaling_max_freq
-
-# GPU - cap by Adreno power-level index (0 = fastest), not by frequency.
-# min_pwrlevel is widened to the slowest level first, or the kernel snaps the cap back.
-chmod 666 /sys/class/kgsl/kgsl-3d0/min_pwrlevel
-echo 13 > /sys/class/kgsl/kgsl-3d0/min_pwrlevel
-chmod 444 /sys/class/kgsl/kgsl-3d0/min_pwrlevel
-chmod 666 /sys/class/kgsl/kgsl-3d0/max_pwrlevel
-echo 6 > /sys/class/kgsl/kgsl-3d0/max_pwrlevel                # power-level index (~660 MHz here)
-chmod 444 /sys/class/kgsl/kgsl-3d0/max_pwrlevel
-```
-
-If `PServerBinder` is absent, the app degrades gracefully and reports the device as incompatible — it never asks for or requires granted root.
-
-> **Unit note:** cpufreq nodes take a frequency in kHz; the kgsl cap takes a power-level index (0 = fastest), not a frequency. PULSE keeps every frequency in kHz internally and converts to the power-level index at the write boundary.
-
----
-
-## FAQ and troubleshooting
-
-<details>
-<summary><b>PULSE says my device is incompatible.</b></summary>
-
-Your firmware does not expose the `PServerBinder` service PULSE needs to write protected nodes without root. There is no workaround that does not involve rooting — and PULSE deliberately will not go there.
-
-</details>
-
-<details>
-<summary><b>AutoTDP will not hold 60 fps in a heavy game.</b></summary>
-
-If one CPU core is pegged and the chip is already at its frequency ceiling, that is a hardware wall — no tuner can pull more frames out of it. AutoTDP detects this and stops burning power chasing the impossible, holding the best achievable rate cool and efficient instead. Try the **Smooth** mode if you want it to lean harder into frames at the cost of more heat/power.
-
-</details>
-
-<details>
-<summary><b>The fan is loud in a demanding game.</b></summary>
-
-Under heavy load these chips genuinely run hot, and a hot chip needs airflow — physics. Use the **Custom -> Hold Target Temp** fan with a sensible target, and an **Efficient** AutoTDP mode, for the quietest result the thermals allow.
-
-</details>
-
-<details>
-<summary><b>The OSD overlay is not showing.</b></summary>
-
-Make sure **Display over other apps** and **Usage Access** are both granted, and that the overlay is enabled in settings. The OSD intentionally hides over PULSE itself, the home screen, and Android UI.
-
-</details>
-
----
-
-## Build from source
-
-```bash
-./gradlew testDebugUnitTest assembleDebug
-```
-
-Debug APK lands in `app/build/outputs/apk/debug/`. A signing config is picked up automatically from `ANDROID_KEYSTORE_*` environment variables or `local.properties` when present; without it, debug builds use the default debug key.
-
----
+The device ships a privileged `PServerBinder` service in its stock firmware. PULSE obtains it through
+reflection and runs short shell scripts through it as root to write protected sysfs nodes — the same
+technique ClusterTune pioneered. Every string that reaches that shell is quoted; every script is written
+and executed under one lock.
 
 ## Development and AI assistance
 
-PULSE is developed with substantial help from an AI coding assistant (Anthropic's Claude). A large share of the source code, and most of this README and the project's documentation, were written with that assistance under the maintainer's direction and review. Every change is built, unit-tested, and verified on real hardware before it ships.
+Like upstream, this fork is developed with substantial help from an AI coding assistant (Anthropic's
+Claude), under the maintainer's direction and review. Every change is built, unit-tested and verified on
+a Retroid Pocket 6 before it is committed. This is disclosed so you can judge the code accordingly.
 
-This is disclosed in the interest of transparency — if you're evaluating, contributing to, or forking PULSE, you should know how it is built.
+## License
 
----
-
-## License and Attribution
-
-Distributed under the **GNU General Public License v2.0** — see [LICENSE](LICENSE).
-
-PULSE uses the no-root `PServer` technique pioneered by **ClusterTune**; full credits and third-party notices are in [NOTICE.md](NOTICE.md). Please keep this attribution intact in any fork or redistribution (the GPL requires it).
-
----
+**GNU General Public License v2.0 or later** — see [LICENSE](LICENSE). This fork keeps the licence, the
+attribution chain in [NOTICE.md](NOTICE.md) and the record of changes in [PROGRESS.md](PROGRESS.md) and
+git history, as §2(a) requires. Source for every published build is this repository, tagged per release.
 
 <div align="center">
 
-*Built with care for the handheld community. If PULSE made your handheld quieter, cooler, or last longer, that is the whole point.*
+*Built on PULSE, with thanks. If your handheld runs cooler, quieter, or longer because of it, thank
+keiretrogaming first.*
 
 </div>
