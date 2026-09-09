@@ -133,7 +133,7 @@ class SettingsStorage(private val context: Context) {
             quickAccessCombo = preferences[quickAccessComboKey],
             quickAccessPerGameScope = preferences[quickAccessPerGameScopeKey] ?: true,
             overlayPreset = preferences[overlayPresetKey]?.let(::parseOverlayPreset) ?: OverlayPreset.COMPACT,
-            // Existing users (no element key yet) inherit their saved preset's bundle — no migration logic needed.
+            // Existing users (no element key yet) inherit their saved preset's bundle, no migration logic needed.
             overlayElements = preferences[overlayElementsKey]?.let(::parseOverlayElements)
                 ?: (preferences[overlayPresetKey]?.let(::parseOverlayPreset) ?: OverlayPreset.COMPACT).elements,
             overlayOpacity = preferences[overlayOpacityKey] ?: 90,
@@ -324,7 +324,7 @@ class SettingsStorage(private val context: Context) {
             ?.takeIf { it.isNotEmpty() }
     }
 
-    /** Packages with a persisted AutoTDP operating point (warm-start available) — drives the per-app "tuned" badge. */
+    /** Packages with a persisted AutoTDP operating point (warm-start available), drives the per-app "tuned" badge. */
     val autoTdpLearnedPackages: Flow<Set<String>> =
         context.settingsDataStore.data.map { prefs ->
             prefs[autoTdpCapsKey]?.let { raw ->
@@ -378,7 +378,7 @@ class SettingsStorage(private val context: Context) {
             preferences[customGpuFloorKey] = tuning.gpuFloorPercent
             preferences[customCpuFloorKey] = tuning.cpuFloorPercent
             preferences[customPrimeBoostKey] = tuning.primeCoreBoostLimited
-            // Preferences DataStore can't hold null — remove the key when no governor is remembered.
+            // Preferences DataStore can't hold null, remove the key when no governor is remembered.
             tuning.governorLabel
                 ?.let { preferences[customGovernorLabelKey] = it }
                 ?: preferences.remove(customGovernorLabelKey)

@@ -115,7 +115,7 @@ class PerformanceTileService : TileService() {
                 subtitle = getString(R.string.tile_state_unavailable),
             )
         }
-        // Tiers apply as MANUAL_PROFILE_ID, so "Manual" really means a tier is active — show it.
+        // Tiers apply as MANUAL_PROFILE_ID, so "Manual" really means a tier is active, show it.
         val manual = getString(R.string.tile_state_manual)
         val profileName = effectiveTileProfileName(state)
         val displayName = if (profileName == null || profileName == manual) {
@@ -205,7 +205,7 @@ class PerformanceTileService : TileService() {
             container.settingsStorage.persistActiveTierLabel(PowerTier.CUSTOM.label)
             val restored = container.repository.restoreCustomValues()
             updateTileToActive(container)
-            showToast(if (restored.isSuccess) "Applied Custom" else "Custom — adjust in app")
+            showToast(if (restored.isSuccess) "Applied Custom" else "Custom, adjust in app")
         } else {
             container.repository.applyTier(nextTier)
                 .onSuccess {
@@ -259,7 +259,7 @@ class PerformanceTileService : TileService() {
     @android.annotation.SuppressLint("StartActivityAndCollapseDeprecated")
     private fun launchIntentAndCollapse(intent: Intent) {
         // API 34+ (Odin 3 = Android 15): the Intent overload throws
-        // UnsupportedOperationException — a PendingIntent is mandatory.
+        // UnsupportedOperationException, a PendingIntent is mandatory.
         // API < 34 (Thor / RP6 = Android 13): the Intent overload is the only one available.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             val pendingIntent = PendingIntent.getActivity(

@@ -97,7 +97,7 @@ class TunerViewModel(
     val perAppBatteryWh: StateFlow<Float> = (perAppConfigStorage?.batteryCapacityWh ?: flowOf(0f))
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0f)
 
-    /** Packages AutoTDP has learned a warm-start operating point for — drives the per-app "tuned" badge. */
+    /** Packages AutoTDP has learned a warm-start operating point for, drives the per-app "tuned" badge. */
     val autoTdpLearnedPackages: StateFlow<Set<String>> = settingsStorage.autoTdpLearnedPackages
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
@@ -201,7 +201,7 @@ class TunerViewModel(
     /** AutoTDP FPS-target options for this device's SoC (Odin: 30/40/60/90/120; 8 Gen 2: 60/90/120). */
     val autoTdpFpsOptions: List<Int> = PerAppConfig.fpsTargetsFor(repository.socModel())
 
-    /** Whether to show per-mode watt caps on the AutoTDP chips — only the Odin enforces them. */
+    /** Whether to show per-mode watt caps on the AutoTDP chips, only the Odin enforces them. */
     val autoTdpShowWattCaps: Boolean =
         com.kei.pulse.data.AutoTuneController.appliesOdinPowerTuning(repository.socModel())
 
@@ -214,7 +214,7 @@ class TunerViewModel(
     /**
      * Master switch. [onSaved] runs after persist and should (re)start the watcher: ON resumes management;
      * OFF makes the service hand everything back to manufacturer stock and stop itself (the pre-uninstall
-     * "system is in control" state). Starting on OFF is intentional — it's how the revert gets a root context.
+     * "system is in control" state). Starting on OFF is intentional, it's how the revert gets a root context.
      */
     fun setPulseEnabled(enabled: Boolean, onSaved: () -> Unit = {}) {
         viewModelScope.launch {
@@ -235,10 +235,10 @@ class TunerViewModel(
                 releaseManualCapsToStock()
             } else {
                 // Disabling hands the clocks back to the active manual tier. Enabling RELEASED the caps to
-                // stock, so disabling must RE-APPLY the tier — otherwise the clocks stay wide open (e.g. a
+                // stock, so disabling must RE-APPLY the tier, otherwise the clocks stay wide open (e.g. a
                 // Power Target 69% is lost) and the current-values readout shows full clocks until the user
                 // re-nudges the tier (reported bug). Reuses the same restore path as clicking the active tier
-                // (which already re-applies the Power Target — see [applyTier]).
+                // (which already re-applies the Power Target, see [applyTier]).
                 applyTier(_activeTier.value)
             }
             onSaved()
@@ -412,7 +412,7 @@ class TunerViewModel(
         // Keep the settings-backed UI state in sync with the persisted settings, so a change made ELSEWHERE
         // (the QS tile, and now the Quick Access bar) reflects in the app UI without a restart. Without this,
         // turning AutoTDP off elsewhere left the tiers locked; the bar's global fps edit showed stale in the
-        // app (the "set 30 on the bar, app still says 60" bug — the init block seeds these ONCE). All fields
+        // app (the "set 30 on the bar, app still says 60" bug, the init block seeds these ONCE). All fields
         // read here are declared ABOVE the init block (the Main.immediate first-emission NPE gotcha). The
         // diff-guards also keep a persist echo of the VM's own setter from re-firing anything.
         viewModelScope.launch {
@@ -434,7 +434,7 @@ class TunerViewModel(
                 if (_autoTdpAggressivePark.value != s.autoTdpAggressivePark) {
                     _autoTdpAggressivePark.value = s.autoTdpAggressivePark
                 }
-                // The bar's Custom Power Target writes these too now — mirror them like the rest.
+                // The bar's Custom Power Target writes these too now, mirror them like the rest.
                 if (_powerTargetEnabled.value != s.powerTargetEnabled) {
                     _powerTargetEnabled.value = s.powerTargetEnabled
                 }
@@ -459,7 +459,7 @@ class TunerViewModel(
             )
             // Snapshot the tuning knobs only while Custom is the active tier. Preset applies set
             // the tier to the preset before calling this, so they can't overwrite the Custom
-            // memory — which is exactly what lets cycling back to Custom restore it intact.
+            // memory, which is exactly what lets cycling back to Custom restore it intact.
             if (_activeTier.value == PowerTier.CUSTOM) {
                 settingsStorage.persistCustomTuning(
                     CustomTuning(
@@ -500,13 +500,13 @@ class TunerViewModel(
 
     /**
      * Compute + apply the Power Target's CPU caps (GPU left at full range when CPU-only) and persist them as the
-     * Custom map. Suspends so callers can sequence it — e.g. restoring a Power-Target-governed Custom needs the
+     * Custom map. Suspends so callers can sequence it, e.g. restoring a Power-Target-governed Custom needs the
      * target re-applied in order, not fired-and-forgotten.
      */
     private suspend fun applyPowerTargetValues(percent: Int) {
         val snapshot = state.value
         if (snapshot.policies.isEmpty()) return
-        // Shared with the Quick Access bar's live apply — one math, one behavior (PowerTargetMathTest pins it).
+        // Shared with the Quick Access bar's live apply, one math, one behavior (PowerTargetMathTest pins it).
         val values = com.kei.pulse.model.PowerTargetMath.capsForPercent(
             snapshot.policies,
             percent,
@@ -537,7 +537,7 @@ class TunerViewModel(
     private val _fanMode = MutableStateFlow<Int?>(null)
     val fanMode: StateFlow<Int?> = _fanMode
 
-    /** True only on the Odin 3 whose firmware exposes the writable custom-fan PWM node — gates the Custom
+    /** True only on the Odin 3 whose firmware exposes the writable custom-fan PWM node, gates the Custom
      *  chip + curve editor so Thor/RP6 never see a dead option. Resolved off the main thread on first refresh. */
     private val _customFanSupported = MutableStateFlow(false)
     val customFanSupported: StateFlow<Boolean> = _customFanSupported
@@ -571,7 +571,7 @@ class TunerViewModel(
                     customFan = FanController.customFanAvailable(),
                 )
             }
-            // Custom never writes a vendor fan_mode, so the readback can't show it — reflect the persisted
+            // Custom never writes a vendor fan_mode, so the readback can't show it, reflect the persisted
             // Custom selection directly (Odin only) so the chip stays selected and the editor survives a
             // relaunch. Everywhere else, trust the live vendor readback.
             _customFanSupported.value = snap.customFan
@@ -655,7 +655,7 @@ class TunerViewModel(
             if (tuning.cpuFloorPercent > 0) {
                 cpuFloorController.setFloor(policies, tuning.cpuFloorPercent)
             }
-            // Prime Boost Limit only governs when NO Power Target caps the prime — otherwise the PT's (lower)
+            // Prime Boost Limit only governs when NO Power Target caps the prime, otherwise the PT's (lower)
             // prime cap must win. Without this gate the no-turbo write (e.g. 4204800) overwrites and 444-locks
             // the prime scaling_max that applyPowerTargetValues just set (e.g. 3072000 @ 69%), so the prime
             // reads back at 4.2 GHz instead of the Power Target value. PT governs the CPU clusters whenever it's
@@ -710,7 +710,7 @@ class TunerViewModel(
      * "Est peak" figure converges to this device instead of staying on the hard-coded constant.
      */
     private fun updatePeakCalibration(snap: TelemetrySnapshot) {
-        // Charger current is not system draw — calibrating while plugged in corrupts the model.
+        // Charger current is not system draw, calibrating while plugged in corrupts the model.
         if (!snap.isDischarging) return
         val drawW = snap.batteryDrawW ?: return
         val busy = snap.gpuBusyPercent ?: return
@@ -728,7 +728,7 @@ class TunerViewModel(
         viewModelScope.launch {
             val ok = withContext(Dispatchers.IO) { fanController.setMode(mode) }
             // Custom drives the PWM curve and never writes a vendor fan_mode, so reflect the chosen mode
-            // directly — reading back the live value would still show Smart/etc. and the chip wouldn't stick.
+            // directly, reading back the live value would still show Smart/etc. and the chip wouldn't stick.
             _fanMode.value = if (mode == FanController.CUSTOM) {
                 mode
             } else {
@@ -787,7 +787,7 @@ class TunerViewModel(
         }
     }
 
-    /** Live ACTUAL fan speed as a duty % from the gpio5_pwm2 duty node — the reliable "how fast is the fan"
+    /** Live ACTUAL fan speed as a duty % from the gpio5_pwm2 duty node, the reliable "how fast is the fan"
      *  reading (the RPM tach reads 0 most of the time, even in the vendor's own mode, so we don't trust it). */
     suspend fun readFanDutyPercent(): Int? = withContext(Dispatchers.IO) {
         val duty = FanCurveController.readDutyFromDevice() ?: return@withContext null
@@ -813,7 +813,7 @@ class TunerViewModel(
                 return@launch
             }
             _fanCalibrating.value = true
-            transientMessage.value = "Calibrating fan — sweeping speeds (~15s)…"
+            transientMessage.value = "Calibrating fan, sweeping speeds (~15s)…"
             val cal = withContext(Dispatchers.IO) { runFanSweep() }
             settingsStorage.persistFanCurve(cal.recommendedCurve)
             _fanCalibrating.value = false
@@ -878,7 +878,7 @@ class TunerViewModel(
                 // (a saved field with no mapping there is a restoration bug, not a silent drop).
                 applySideControls(TierTransition.afterCustomRestore(tuning))
                 // A Power-Target-governed Custom must actually RE-APPLY the target, not just restore the saved
-                // value map — otherwise the prior preset's CPU freqs keep showing in the current-values readout
+                // value map, otherwise the prior preset's CPU freqs keep showing in the current-values readout
                 // until the PT slider is nudged (the reported bug). Mirrors the slider path, and re-persists the
                 // reduced map so any stale saved values self-heal.
                 if (tuning.powerTargetEnabled) applyPowerTargetValues(tuning.powerTargetPercent)
@@ -942,7 +942,7 @@ class TunerViewModel(
                 // A preset is governed by the tier, so it CLEARS every Custom side-control (Power Target,
                 // GPU lock + floor, CPU floor, prime-boost limit). The cleared UI state is now the single
                 // unit-tested source of truth (TierTransition.afterPreset), so a clear can't silently be
-                // forgotten here again — that was the prime-boost Known Bug. Device releases are unchanged:
+                // forgotten here again, that was the prime-boost Known Bug. Device releases are unchanged:
                 // the CPU floor is released on the node below (the cap apply writes only scaling_max, never
                 // the non-prime scaling_min the floor raised), and the GPU lock is re-evaluated by
                 // reapplyGpuLock() at the end of this apply.
@@ -984,7 +984,7 @@ class TunerViewModel(
         primeCoreBoostLimited = _primeCoreBoostLimited.value,
     )
 
-    /** Push a resolved side-control state onto the UI flows — the single place these flags are assigned
+    /** Push a resolved side-control state onto the UI flows, the single place these flags are assigned
      *  across tier transitions, so a transition can't clear/restore one but forget another. */
     private fun applySideControls(s: SideControlState) {
         _powerTargetEnabled.value = s.powerTargetEnabled
@@ -1051,7 +1051,7 @@ class TunerViewModel(
                 selectedValues = state.currentValues,
                 isReset = appliedProfile?.id == ProfileStateResolver.STOCK_PROFILE_ID,
                 appliedDisplayProfileId = appliedProfile?.id ?: ProfileStateResolver.MANUAL_PROFILE_ID,
-                // A pure manual apply (no profile matched) is the user's Custom setup — snapshot it.
+                // A pure manual apply (no profile matched) is the user's Custom setup, snapshot it.
                 persistAsCustom = appliedProfile == null,
             )
             applyResult.onSuccess { outcome ->
@@ -1213,7 +1213,7 @@ class TunerViewModel(
     }
 
     private val _capturingCombo = MutableStateFlow(false)
-    /** True while "Set combo" is reading the controller — drives the Settings UI's "press now" state. */
+    /** True while "Set combo" is reading the controller, drives the Settings UI's "press now" state. */
     val capturingCombo: StateFlow<Boolean> = _capturingCombo
 
     /** Press-to-capture: read the next combo the user holds (via getevent) and save it. */
@@ -1227,7 +1227,7 @@ class TunerViewModel(
                     settingsStorage.persistQuickAccessCombo(com.kei.pulse.data.InputComboParser.encode(combo))
                 }
             } finally {
-                // Always clear, even on a throw/cancellation — a stuck flag wedges the Settings UI with no recovery.
+                // Always clear, even on a throw/cancellation, a stuck flag wedges the Settings UI with no recovery.
                 _capturingCombo.value = false
             }
         }

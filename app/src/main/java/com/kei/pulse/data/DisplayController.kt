@@ -5,7 +5,7 @@ import com.kei.pulse.root.RootSupport
 /**
  * Resolution / render-scale control via `wm size` + `wm density`, run as root through
  * PServer. Fully reversible (`wm size reset` / `wm density reset`) and cannot harm the
- * hardware — worst case the UI looks wrong until reset or reboot. Lowering resolution is a
+ * hardware, worst case the UI looks wrong until reset or reboot. Lowering resolution is a
  * real performance lever on the GPU (fewer pixels to render).
  */
 class DisplayController {

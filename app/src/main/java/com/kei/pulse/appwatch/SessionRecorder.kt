@@ -12,7 +12,7 @@ import com.kei.pulse.model.SessionSample
 
 /**
  * Records one [GameSession] at a time from the watcher's tick. Called once per tick with whatever the
- * watcher already read — it adds no device I/O of its own. A new package ends the previous session; a
+ * watcher already read, it adds no device I/O of its own. A new package ends the previous session; a
  * neutral foreground (home, PULSE, Android UI) pauses and, after [IDLE_END_MS], ends it. Persists every
  * [PERSIST_EVERY] samples and on end, so a kill mid-game still leaves a recap.
  */

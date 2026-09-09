@@ -1,4 +1,4 @@
-# PULSE (Retroid Pocket 6 fork) — Notices & Attribution
+# PULSE (Retroid Pocket 6 fork): Notices & Attribution
 
 This software is licensed under the **GNU General Public License v2.0 or later** (see `LICENSE`).
 
@@ -7,11 +7,11 @@ This software is licensed under the **GNU General Public License v2.0 or later**
 This fork is dedicated to the people whose work it stands on. PULSE is not ours; we redesigned and
 hardened it for one device. The mechanism, the controllers, the ideas and most of the code are theirs:
 
-- **keiretrogaming** — author of PULSE (https://github.com/keiretrogaming/pulse): AutoTDP, the
+- **keiretrogaming**: author of PULSE (https://github.com/keiretrogaming/pulse): AutoTDP, the
   closed-loop fan, the per-game engine, the overlays, the whole app this fork began from.
-- **AurelioB** — author of ClusterTune (https://github.com/AurelioB/cluster-tune), from which PULSE
+- **AurelioB**: author of ClusterTune (https://github.com/AurelioB/cluster-tune), from which PULSE
   itself was forked: the PServer no-root command-execution approach and the profile/apply pipeline.
-- **FeralAI** — author of O2P Tweaks (https://github.com/FeralAI/o2ptweaks.app), where the PServer
+- **FeralAI**: author of O2P Tweaks (https://github.com/FeralAI/o2ptweaks.app), where the PServer
   command-execution code originates.
 - **TheOldTaylor** (Odin3-CPU-Underclock) and Reddit users **u/twoohfive205** and **u/JoaozaoS** in
   r/OdinHandheld, for the original underclocking idea.
@@ -37,5 +37,5 @@ Please report problems with this fork here, not to the upstream project.
 Upstream PULSE was built with AI assistance and said so. This fork is too: an AI coding assistant
 (Anthropic's Claude) wrote a large share of the changes under the maintainer's direction and review. Every
 change is built, unit-tested and lint-checked, and every feature and fix is validated on an actual Retroid
-Pocket 6 — installed, exercised, and read back from the hardware — before it is committed. What was
+Pocket 6, installed, exercised, and read back from the hardware, before it is committed. What was
 verified, and how, is recorded in `PROGRESS.md`.

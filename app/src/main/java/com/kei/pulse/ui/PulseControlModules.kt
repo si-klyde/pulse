@@ -156,7 +156,7 @@ private fun TierCard(
 /**
  * Bindings for the Custom fan-curve editor. Non-null only on the Odin 3 (the device with the writable PWM
  * node); when present, [FanModule] shows the Custom chip + reveals [FanCurveEditor] while Custom is selected.
- * [curve]/[responseStep] mirror the persisted settings (one source of truth — the same curve the running
+ * [curve]/[responseStep] mirror the persisted settings (one source of truth, the same curve the running
  * controller drives); the callbacks persist edits; [readTelemetry]/[readFanDutyPercent] feed the live marker.
  */
 data class FanCurveEditorBindings(
@@ -228,7 +228,7 @@ fun fanUnderAutoTdpCaption(currentMode: Int?, customAvailable: Boolean): String 
         "While AutoTDP tunes a game, Custom keeps running; Hold-target is capped 2 °C under the thermal " +
             "ceiling so the fan spins up before the clocks trim."
     customAvailable ->
-        "While AutoTDP tunes a game the fan runs as Smart regardless of this choice — pick Custom to keep " +
+        "While AutoTDP tunes a game the fan runs as Smart regardless of this choice, pick Custom to keep " +
             "your own quieter loop in-game. This mode applies outside tuned games."
     else ->
         "While AutoTDP tunes a game the fan runs as Smart regardless of this choice. This mode applies " +
@@ -243,7 +243,7 @@ fun fanUnderAutoTdpCaption(currentMode: Int?, customAvailable: Boolean): String 
  * coordinate/edit math is unit-tested ([FanGraphGeometry], [FanCurveEditing]).
  *
  * Gesture notes (CLAUDE.md gotchas): the curve points live in ONE stable [mutableStateOf] (not re-created
- * per external curve change — that would strand the gesture's captured reference); external changes sync in
+ * per external curve change, that would strand the gesture's captured reference); external changes sync in
  * via a [LaunchedEffect]. The drag CONSUMES from touch-down only when a knee is grabbed, so it wins over the
  * page's verticalScroll without freezing taps elsewhere. [onCurveChange] is read through [rememberUpdatedState].
  */
@@ -267,7 +267,7 @@ fun FanCurveEditor(bindings: FanCurveEditorBindings, modifier: Modifier = Modifi
     fun effective() = FanCurve(pointsState.value).shiftedBy(biasState.value)
 
     // Live marker telemetry: current SoC temp (max of CPU/GPU) + the ACTUAL fan % (read from the duty node;
-    // the RPM tach is unreliable, so we report the real fan duty % — same number the vendor app shows).
+    // the RPM tach is unreliable, so we report the real fan duty %, same number the vendor app shows).
     var liveTemp by remember { mutableStateOf<Int?>(null) }
     var liveDutyPercent by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(Unit) {
@@ -287,7 +287,7 @@ fun FanCurveEditor(bindings: FanCurveEditorBindings, modifier: Modifier = Modifi
             .border(1.dp, outline, MaterialTheme.shapes.large),
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-            // Header + live readout: "47°C · fan 49%" — temp + the ACTUAL fan duty % off the device.
+            // Header + live readout: "47°C · fan 49%", temp + the ACTUAL fan duty % off the device.
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(
                     text = "Custom fan curve",
@@ -307,7 +307,7 @@ fun FanCurveEditor(bindings: FanCurveEditorBindings, modifier: Modifier = Modifi
             }
             Spacer(Modifier.height(10.dp))
 
-            // Smart (closed-loop) vs manual curve. Smart holds a target temp with minimum fan — no curve to tune.
+            // Smart (closed-loop) vs manual curve. Smart holds a target temp with minimum fan, no curve to tune.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -316,8 +316,8 @@ fun FanCurveEditor(bindings: FanCurveEditorBindings, modifier: Modifier = Modifi
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Hold target temp", style = MaterialTheme.typography.labelMedium, color = onSurfaceVariant)
                     Text(
-                        if (bindings.smartEnabled) "Closed-loop — the fan self-adjusts to hold the target, quietly"
-                        else "Manual — you shape the temperature → fan curve",
+                        if (bindings.smartEnabled) "Closed-loop, the fan self-adjusts to hold the target, quietly"
+                        else "Manual, you shape the temperature → fan curve",
                         style = MaterialTheme.typography.labelSmall,
                         color = onSurfaceVariant,
                         maxLines = 1,
@@ -353,7 +353,7 @@ fun FanCurveEditor(bindings: FanCurveEditorBindings, modifier: Modifier = Modifi
                     Text("quieter · warmer", style = MaterialTheme.typography.labelSmall, color = onSurfaceVariant)
                 }
                 Text(
-                    text = "The fan holds your chip at this temperature using the least speed it can — silent when " +
+                    text = "The fan holds your chip at this temperature using the least speed it can, silent when " +
                         "cool, ramping only as much as needed, adapting to each game and the room. No curve to tune.",
                     style = MaterialTheme.typography.labelSmall,
                     color = onSurfaceVariant,
@@ -416,7 +416,7 @@ fun FanCurveEditor(bindings: FanCurveEditorBindings, modifier: Modifier = Modifi
                                                 moved = true; break
                                             }
                                         }
-                                        if (moved) return@awaitEachGesture // it was a scroll — leave it to the page
+                                        if (moved) return@awaitEachGesture // it was a scroll, leave it to the page
                                         val added = FanCurveEditing.addPoint(pointsState.value, downNp.tempC, downNp.percent - bias)
                                         if (added.size != pointsState.value.size) {
                                             pointsState.value = added
@@ -587,7 +587,7 @@ fun FanCurveEditor(bindings: FanCurveEditorBindings, modifier: Modifier = Modifi
 }
 
 /**
- * A vertical [Slider] — value increases upward — for the Cooler/Quieter bias on the left of the curve graph.
+ * A vertical [Slider], value increases upward, for the Cooler/Quieter bias on the left of the curve graph.
  * Rotates a standard Slider 270° and swaps its measured dimensions (the canonical Compose recipe) so it fills
  * the height it's given. Verified on-device (can't screenshot PULSE).
  */
@@ -667,7 +667,7 @@ private fun PulseChip(
     sub: String? = null,
 ) {
     // Design vocabulary: unselected = hairline outline, selected = inverted ink fill. `accent` is ignored on
-    // purpose — colour is reserved for meaning (temperature/load), never for selection.
+    // purpose, colour is reserved for meaning (temperature/load), never for selection.
     @Suppress("UNUSED_VARIABLE") val unused = accent
     val selectedFill = MaterialTheme.colorScheme.onSurface
     Surface(
@@ -866,7 +866,7 @@ fun GpuFloorModule(
         }
         if (locked) {
             Text(
-                text = "Pinned to the GPU's current clock — set and apply your GPU frequency first, then lock. The floor is disabled while locked.",
+                text = "Pinned to the GPU's current clock, set and apply your GPU frequency first, then lock. The floor is disabled while locked.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 6.dp, start = 4.dp, end = 4.dp),
@@ -886,7 +886,7 @@ fun GpuFloorModule(
                 }
             }
             Text(
-                text = "Keeps the GPU from dropping below this share of its max — steadier frame pacing in demanding games.",
+                text = "Keeps the GPU from dropping below this share of its max, steadier frame pacing in demanding games.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp, start = 4.dp, end = 4.dp),
@@ -896,8 +896,8 @@ fun GpuFloorModule(
 }
 
 /**
- * Power Target (the "TDP-style" master control). Not real watts — Snapdragon has no
- * programmable wattage cap — but one slider scaling every CPU + GPU ceiling together.
+ * Power Target (the "TDP-style" master control). Not real watts, Snapdragon has no
+ * programmable wattage cap, but one slider scaling every CPU + GPU ceiling together.
  * While enabled it owns those limits, so the individual sliders are locked.
  */
 @Composable
@@ -953,7 +953,7 @@ fun PowerTargetModule(
                 )
                 Text(
                     text = if (cpuOnly) {
-                        "Scales the CPU clusters only — the GPU stays on its own slider and floor."
+                        "Scales the CPU clusters only, the GPU stays on its own slider and floor."
                     } else {
                         "Scales every CPU cluster and the GPU together. The individual sliders below are locked while this is on."
                     },
@@ -985,7 +985,7 @@ private fun wattLabel(w: Float): String = "%.1f".format(w).removeSuffix(".0")
  * foreground game's refresh-rate FPS (refresh rate untouched). It becomes the default for any game
  * without its own per-app binding, so the manual tier/clock controls are locked. Fan: only the Custom
  * loop is honoured during a session (target capped 2 °C under the thermal ceiling so it spins up before
- * the clocks trim); Silent/Smart/Sport all run as vendor Smart until the game exits — see
+ * the clocks trim); Silent/Smart/Sport all run as vendor Smart until the game exits, see
  * `FanArbiter` + `AutoTuneController.autoTdpFanTargetC`.
  */
 @Composable
@@ -1043,7 +1043,7 @@ fun AutoTdpModule(
                         "manual profile may still perform better in some games."
                 } else {
                     "Automatically tunes the CPU and GPU clocks on the fly to hold your FPS target at the " +
-                        "lowest power — games, emulators and even media — using your Custom fan if set, " +
+                        "lowest power, games, emulators and even media, using your Custom fan if set, " +
                         "otherwise Smart, with the panel pinned to max refresh. Runs on any app except PULSE " +
                         "and the home screen; per-app bindings take priority."
                 },
@@ -1113,13 +1113,13 @@ fun AutoTdpModule(
                 }
                 Text(
                     text = (if (showWattCaps)
-                        "Caps sustained power to ~${wattLabel(AutoTuneController.powerCeilingW(bias))} W — the " +
+                        "Caps sustained power to ~${wattLabel(AutoTuneController.powerCeilingW(bias))} W, the " +
                             "chassis envelope; over it, heat outruns the fan. " else "") + when (bias) {
                         AutoTdpBias.EFFICIENT ->
                             "Harvests clocks hard while play is smooth; only steps in on a sustained stutter. " +
-                                "Lowest power and quietest — may allow rare micro-hitches in the heaviest moments."
+                                "Lowest power and quietest, may allow rare micro-hitches in the heaviest moments."
                         AutoTdpBias.BALANCED ->
-                            "Middle ground — harvests in steady play but backs off a little earlier on roughness."
+                            "Middle ground, harvests in steady play but backs off a little earlier on roughness."
                         AutoTdpBias.SMOOTH ->
                             "Protects frames first, keeping clocks higher to avoid hitches. Highest power/heat."
                     },
@@ -1152,7 +1152,7 @@ fun CpuFloorModule(currentPercent: Int, onSelect: (Int) -> Unit, modifier: Modif
             }
         }
         Text(
-            text = "Holds the CPU clusters above this share of their max (scaling_min_freq) — snappier response, more idle draw. Clamped below your cap.",
+            text = "Holds the CPU clusters above this share of their max (scaling_min_freq), snappier response, more idle draw. Clamped below your cap.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 8.dp, start = 4.dp, end = 4.dp),

@@ -11,7 +11,7 @@ import org.junit.Test
  * The watcher-activation decision. Foreground-free features (global Fan / RGB) must run with no
  * permission; foreground-dependent features (per-app, AutoTDP, OSD) need Usage Access. This is the
  * exact logic that, when over-broad, silently killed the global Fan/RGB on a fresh install and across
- * a reboot — so the truth table is locked down here.
+ * a reboot, so the truth table is locked down here.
  */
 class WatcherActivationTest {
 

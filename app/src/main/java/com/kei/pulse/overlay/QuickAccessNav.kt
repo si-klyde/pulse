@@ -6,11 +6,11 @@ package com.kei.pulse.overlay
  * The bar is a WindowManager overlay, where Compose's automatic D-pad focus traversal is unreliable (handle-tap
  * leaves the system in touch mode, which suppresses focus nav). So instead the overlay's key listener translates
  * D-pad / A / B / bumper presses into [QuickAccessNavIntent]s, and the panel drives an EXPLICIT cursor with these
- * helpers — no dependency on Android's focus system at all. The cursor math is the testable core; the panel owns
+ * helpers, no dependency on Android's focus system at all. The cursor math is the testable core; the panel owns
  * the item→action map (it knows the live control list, which varies with mode/scope).
  *
  * Convention: bumpers (L1/R1) switch the rail TAB (wrap-around, console-style); the D-pad moves the cursor
- * WITHIN the active tab's content (clamped — a vertical list shouldn't wrap past its ends); A/Left/Right are
+ * WITHIN the active tab's content (clamped, a vertical list shouldn't wrap past its ends); A/Left/Right are
  * applied by the panel to the focused item.
  */
 enum class QuickAccessNavIntent { TAB_PREV, TAB_NEXT, UP, DOWN, LEFT, RIGHT, ACTIVATE }

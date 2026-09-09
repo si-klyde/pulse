@@ -3,7 +3,7 @@ package com.kei.pulse.model
 import kotlinx.serialization.Serializable
 
 /**
- * AutoTDP's efficiency↔smoothness lean — the single user-facing lever behind efficiency, wattage, and fan
+ * AutoTDP's efficiency↔smoothness lean, the single user-facing lever behind efficiency, wattage, and fan
  * noise. It scales how aggressively the controller harvests vs. holds clocks:
  *  - [EFFICIENT] (default): harvest hard when play is genuinely smooth; only protect frames on a *sustained*
  *    real stutter, not emulator jitter. Lowest watts + quietest.

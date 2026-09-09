@@ -1,7 +1,7 @@
 package com.kei.pulse.appwatch
 
 /**
- * Pure classification of whether a foreground package is a "neutral" system surface — one PULSE never
+ * Pure classification of whether a foreground package is a "neutral" system surface, one PULSE never
  * tunes and never draws the OSD over (PULSE itself, systemui, any Settings app, a home launcher, an IME).
  *
  * Extracted from [ForegroundAppMonitorService.isNeutralForeground] so the package-name rules are unit
@@ -14,7 +14,7 @@ object ForegroundClassifier {
     /**
      * A Settings surface. Covers AOSP Settings and its search activity (`com.android.settings`,
      * `com.android.settings.intelligence`) AND the **vendor** Settings apps the AYN/Retroid devices ship,
-     * which are NOT under the AOSP prefix — the Odin's is `com.odin.settings` (class `com.ro.settings.*`),
+     * which are NOT under the AOSP prefix, the Odin's is `com.odin.settings` (class `com.ro.settings.*`),
      * and the sibling devices use the same `*.settings` vendor convention. Matching the `.settings` suffix
      * neutralizes all of them without needing each device's exact package hard-coded.
      */

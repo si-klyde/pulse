@@ -8,7 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Pins every per-device invariant row AND asserts the legacy consumers agree with the table — so a device
+ * Pins every per-device invariant row AND asserts the legacy consumers agree with the table, so a device
  * fact can never again live (and silently diverge) in two places. The bug class: an assumption true on the
  * Odin, false on the Thor/RP6, baked into imperative code.
  */
@@ -29,7 +29,7 @@ class DeviceProfilesTest {
         assertTrue(p.primeIsVendorFloored)
         assertTrue(p.honorsGameModeFpsCap)
         assertEquals(listOf(30, 60, 120), p.fpsTargetOptions)
-        assertFalse("the Odin panel has no 90 Hz mode — Android floors a 90 cap to 60", 90 in p.fpsTargetOptions)
+        assertFalse("the Odin panel has no 90 Hz mode, Android floors a 90 cap to 60", 90 in p.fpsTargetOptions)
         assertTrue(p.appliesOdinPowerTuning)
         assertEquals(FanController.SMART, p.fanReleaseMode)
     }
@@ -37,7 +37,7 @@ class DeviceProfilesTest {
     @Test
     fun `sd 8 gen 2 row - scaling prime, refresh path with 90hz, watt tuning off`() {
         val p = DeviceProfiles.SD8GEN2
-        assertFalse("the 8 Gen 2 prime genuinely scales — the Odin watt cap/settle must not apply", p.primeIsVendorFloored)
+        assertFalse("the 8 Gen 2 prime genuinely scales, the Odin watt cap/settle must not apply", p.primeIsVendorFloored)
         assertFalse(p.honorsGameModeFpsCap)
         assertEquals(listOf(60, 90, 120), p.fpsTargetOptions)
         assertFalse(p.appliesOdinPowerTuning)

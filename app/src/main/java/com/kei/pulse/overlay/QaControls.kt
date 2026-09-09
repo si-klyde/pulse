@@ -58,7 +58,7 @@ internal val QaBody = TextStyle(fontFamily = Bricolage, fontSize = 13.sp, lineHe
 internal val QaTitle = TextStyle(fontFamily = Bricolage, fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, color = OsdInk)
 internal val QaNum = TextStyle(fontFamily = Azeret, fontSize = 12.sp, lineHeight = 14.sp, letterSpacing = (-0.02).sp, fontFeatureSettings = "tnum", color = OsdInk)
 
-/** True when the OS animator scale is 0 (Developer Options "Animations off" / reduced motion) — read once. */
+/** True when the OS animator scale is 0 (Developer Options "Animations off" / reduced motion), read once. */
 @Composable
 internal fun rememberReduceMotion(): Boolean {
     val resolver = LocalContext.current.contentResolver

@@ -15,7 +15,7 @@ data class SessionSample(
 
 /**
  * A recorded game session: what the watcher saw while one game was in front. The home screen's hero is
- * built from this — live while the game runs, as a recap afterwards.
+ * built from this, live while the game runs, as a recap afterwards.
  *
  * Samples are downsampled by pair-averaging once they exceed [MAX_SAMPLES], so a long session costs the
  * same memory and disk as a short one and the trace keeps its overall shape.

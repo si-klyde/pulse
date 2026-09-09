@@ -16,7 +16,7 @@ import com.kei.pulse.model.AppSettings
 
 /**
  * One fixed scheme regardless of system light/dark: black housing, white ink, no chromatic accent.
- * `primary` IS the ink — a selected control is an inverted fill, not a coloured one. The custom-accent
+ * `primary` IS the ink, a selected control is an inverted fill, not a coloured one. The custom-accent
  * setting still works for people who want colour back; it only recolours `primary`.
  */
 private fun instrumentColorScheme(settings: AppSettings): ColorScheme {

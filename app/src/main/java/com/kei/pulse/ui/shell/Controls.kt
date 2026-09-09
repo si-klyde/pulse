@@ -67,7 +67,7 @@ fun SegRow(label: String?, modifier: Modifier = Modifier, height: Int = 44, opti
     }
 }
 
-/** A selectable card with a title and a caption — the tier / lean pattern. */
+/** A selectable card with a title and a caption, the tier / lean pattern. */
 @Composable
 fun RowScope.OptionCard(title: String, caption: String, selected: Boolean, onClick: () -> Unit, height: Int = 56) {
     Column(

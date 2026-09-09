@@ -6,20 +6,20 @@ import com.kei.pulse.model.CpuPolicyInfo
 /**
  * Parses a saved `PulseAutoTdp` logcat capture back into the inputs the AutoTDP controller saw, so a
  * real gaming session can be **re-run through the actual `AutoTuneController.step()`** off-device (see
- * [AutoTdpReplay]). This is the test-side half of the replay harness — the device emits the capture
+ * [AutoTdpReplay]). This is the test-side half of the replay harness, the device emits the capture
  * (`ForegroundAppMonitorService.logAutoTdp`, `AUTO_DEBUG`), this turns it back into structured ticks.
  *
  * Two line kinds are consumed; everything else (logcat noise, `PERFLOCK-PROBE`, the periodic `mn/mx`
  * read-back text, blanks) is ignored:
- *  - the one-shot **`AUTOTDP-SESSION`** header — session config the per-tick line can't carry
+ *  - the one-shot **`AUTOTDP-SESSION`** header, session config the per-tick line can't carry
  *    (`tgt`, `bias`, the Odin `wattCap` gate) plus the static cluster layout (`policies`);
- *  - each per-tick line (`tgt=… act=…`) — the 10 `step()` input scalars + the recorded action/caps.
+ *  - each per-tick line (`tgt=… act=…`), the 10 `step()` input scalars + the recorded action/caps.
  *
  * Robust to the logcat prefix (we match `key=value` tokens anywhere in the line) and to **older
  * captures missing `primePk`** (that input parses as null, exactly as `step()` treats an absent signal).
  *
  * Fidelity caveat: the log rounds values (fps %.1f, draw %.2f, temps int, tail %.0f), so replay runs on
- * rounded inputs ≈ live — faithful for decision-logic regression, NOT bit-exact.
+ * rounded inputs ≈ live, faithful for decision-logic regression, NOT bit-exact.
  */
 object AutoTdpLogParser {
 
@@ -34,9 +34,9 @@ object AutoTdpLogParser {
         val gpuTempC: Int?,
         val cpuBusy: Int?,
         val gpuBusy: Int?,
-        /** `primePk` — the PRIME-cluster peak = step()'s `cpuPeakPercent` (the park guard). */
+        /** `primePk`, the PRIME-cluster peak = step()'s `cpuPeakPercent` (the park guard). */
         val cpuPeak: Int?,
-        /** `cpuPk` — the ALL-core peak = step()'s `cpuCorePeakPercent` (the hot-thread detector). */
+        /** `cpuPk`, the ALL-core peak = step()'s `cpuCorePeakPercent` (the hot-thread detector). */
         val cpuCorePeak: Int?,
         val recordedAction: String,
         val recordedCaps: Map<Int, Int>,
@@ -144,6 +144,6 @@ object AutoTdpLogParser {
 
     private fun int(s: String?): Int? = s?.let { if (it == "-" || it == "null") null else it.toIntOrNull() }
 
-    /** Busy/peak fields log `-1` for "no signal" — fold that to null so `step()` sees an absent input. */
+    /** Busy/peak fields log `-1` for "no signal", fold that to null so `step()` sees an absent input. */
     private fun sentinel(s: String?): Int? = int(s)?.takeIf { it != -1 }
 }

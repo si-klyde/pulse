@@ -9,7 +9,7 @@ class PerformanceCommandBuilder {
      *   floor (before the max). This is **per-cluster on purpose**. The vendor perf HAL pins the *prime*
      *   cluster's min high during gaming (~3 GHz), so without lowering its min the kernel rejects any lower
      *   `scaling_max` (max < min) and the prime never drops. BUT writing a cluster's `scaling_min` wakes the
-     *   HAL, which re-asserts that cluster's OPP — harmless for the prime (we want it pinned low) but it
+     *   HAL, which re-asserts that cluster's OPP, harmless for the prime (we want it pinned low) but it
      *   stomps the *perf* cluster's `scaling_max` back up. So AutoTDP passes ONLY the prime here: prime min
      *   drops (prime can be capped) while the perf cluster's min is left alone (its cap keeps biting). On
      *   reset, pass every CPU id (writable `644`) to hand min control back to the HAL and clear stale locks.
@@ -28,7 +28,7 @@ class PerformanceCommandBuilder {
             if (policy.isGpu) {
                 appendGpuLevel(lines, policy, value)
             } else {
-                // Never echo a non-positive frequency to a CPU freq node — the kernel rejects it / the result
+                // Never echo a non-positive frequency to a CPU freq node, the kernel rejects it / the result
                 // is undefined. A 0/negative value here means malformed detection (or a reset/uninstall edge);
                 // skip the cluster entirely rather than write garbage.
                 if (value <= 0) return@forEach
@@ -49,7 +49,7 @@ class PerformanceCommandBuilder {
     /**
      * Adreno is capped by power-level INDEX (fastest = 0). The kernel clamps `max_pwrlevel`
      * so it can never be a higher index (slower level) than `min_pwrlevel`. If the device's
-     * default `min_pwrlevel` sits above our target the cap silently snaps back — which is
+     * default `min_pwrlevel` sits above our target the cap silently snaps back, which is
      * why only level 0 (uncapped) "stuck" before. So we widen `min_pwrlevel` to the slowest
      * level first (full downscale headroom), then set the ceiling.
      */

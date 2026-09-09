@@ -5,7 +5,7 @@ import org.junit.Test
 
 /**
  * The TOTAL-sleep contract (1.19.6 battery fix): while the screen is off the watcher does ABSOLUTELY
- * nothing — no fan math, no temp reads, no UsageStats, no cap re-asserts. Deliberately trivial: this test
+ * nothing, no fan math, no temp reads, no UsageStats, no cap re-asserts. Deliberately trivial: this test
  * exists so no future edit can sneak per-tick work back into the screen-off state without failing here.
  */
 class SleepGateTest {

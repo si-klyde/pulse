@@ -6,8 +6,8 @@ import com.kei.pulse.model.PerAppConfig
 /**
  * Per-app targeting for the Quick Access bar. The AutoTDP controls edit the FOREGROUND game's
  * [PerAppConfig] (the service creates one if none exists) so a change actually takes effect for a game with
- * a per-app binding — fixing the bug where a per-app fps target overrode the global default the bar wrote.
- * Fan/RGB/OSD stay global (no per-app equivalent), so those actions are NOT per-app. Pure — the service does
+ * a per-app binding, fixing the bug where a per-app fps target overrode the global default the bar wrote.
+ * Fan/RGB/OSD stay global (no per-app equivalent), so those actions are NOT per-app. Pure, the service does
  * the get-or-create + save.
  */
 object QuickAccessPerApp {
@@ -30,7 +30,7 @@ object QuickAccessPerApp {
         globalDefault: Boolean = false,
     ): PerAppConfig {
         val base = existing ?: PerAppConfig(packageName = packageName)
-        // A value edit binds the app to AutoTDP so the value takes effect ("enable it per app") — BUT only when
+        // A value edit binds the app to AutoTDP so the value takes effect ("enable it per app"), BUT only when
         // the app has no binding or is already AutoTDP. It must NOT silently convert (and discard) a user's
         // tier/Custom/profile binding; only the explicit toggle does that.
         val bindAuto = if (base.profileBinding == null || base.profileBinding == PerAppConfig.AUTO_BINDING) {
@@ -41,19 +41,19 @@ object QuickAccessPerApp {
         return when (action) {
             is QuickAccessAction.ToggleAutoTdp -> {
                 // Flip the EFFECTIVE state: turning OFF writes an explicit AUTO_OFF (so it sticks even when the
-                // global default is ON — the bug #1 gap), turning ON writes AUTO_BINDING. The explicit toggle
+                // global default is ON, the bug #1 gap), turning ON writes AUTO_BINDING. The explicit toggle
                 // is the only action allowed to convert a tier/Custom binding (value edits preserve it via
                 // bindAuto above).
                 val currentlyOn = effectiveAutoTdpOn(base, globalDefault)
                 base.copy(profileBinding = if (currentlyOn) PerAppConfig.AUTO_OFF_BINDING else PerAppConfig.AUTO_BINDING)
             }
             is QuickAccessAction.SetTier ->
-                // An explicit mode switch — like the AutoTDP toggle, it's allowed to convert any binding (the
+                // An explicit mode switch, like the AutoTDP toggle, it's allowed to convert any binding (the
                 // user deliberately chose this tier). The AutoTDP fields (fps/bias/park) are preserved untouched
-                // so switching back to AutoTDP later restores them — no data loss.
+                // so switching back to AutoTDP later restores them, no data loss.
                 base.copy(profileBinding = PerAppConfig.tierBinding(action.tier))
             is QuickAccessAction.SetStockMode ->
-                // "Stock — don't tune": the explicit hands-off pick. Same conversion rights as SetTier;
+                // "Stock, don't tune": the explicit hands-off pick. Same conversion rights as SetTier;
                 // AUTO_OFF sticks even when the global default is ON, and the AutoTDP fields are preserved.
                 base.copy(profileBinding = PerAppConfig.AUTO_OFF_BINDING)
             is QuickAccessAction.SetFpsTarget -> base.copy(fpsTarget = action.fps, profileBinding = bindAuto)
@@ -75,18 +75,18 @@ object QuickAccessPerApp {
     /**
      * Under AutoTDP only the Custom fan loop is honoured; Silent/Smart/Sport are replaced by vendor Smart for
      * the session (`FanArbiter` + `startAutoTdp`). True when picking [mode] now changes nothing until the
-     * tuned game exits — the Quick Access panel labels the choice as deferred instead of confirming it.
+     * tuned game exits, the Quick Access panel labels the choice as deferred instead of confirming it.
      */
     fun fanModeDeferredByAutoTdp(autoOn: Boolean, mode: Int): Boolean =
         autoOn && mode != com.kei.pulse.data.FanController.CUSTOM
 
-    /** The game's effective AutoTDP fps target — its per-app value, else the global default. */
+    /** The game's effective AutoTDP fps target, its per-app value, else the global default. */
     fun effectiveFps(config: PerAppConfig?, globalFps: Int): Int = config?.fpsTarget ?: globalFps
 
-    /** The game's effective AutoTDP bias — its per-app value, else the global default. */
+    /** The game's effective AutoTDP bias, its per-app value, else the global default. */
     fun effectiveBias(config: PerAppConfig?, globalDefault: AutoTdpBias): AutoTdpBias = config?.bias ?: globalDefault
 
-    /** The game's effective aggressive-park setting — its per-app value, else the global default. */
+    /** The game's effective aggressive-park setting, its per-app value, else the global default. */
     fun effectiveAggressivePark(config: PerAppConfig?, globalDefault: Boolean): Boolean =
         config?.aggressivePark ?: globalDefault
 }

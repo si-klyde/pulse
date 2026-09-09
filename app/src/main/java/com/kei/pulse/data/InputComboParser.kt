@@ -3,7 +3,7 @@ package com.kei.pulse.data
 /**
  * Pure parsing for the Quick Access bar's controller-combo trigger. Reads LABELED `getevent -l` lines
  * (e.g. "<device>: EV_KEY   BTN_THUMBL   DOWN"), tracks which buttons are held by name, and decides when a
- * saved combo is pressed. Stateless — the watcher carries the held-set across reads. No device access here.
+ * saved combo is pressed. Stateless, the watcher carries the held-set across reads. No device access here.
  *
  * Labeled + key-name based (not raw hex) on purpose: `getevent -l | grep EV_KEY` filters out the analog-stick
  * flood, keeps the output short enough for PServer's first-line read, and gives human-readable combos.
@@ -42,7 +42,7 @@ object InputComboParser {
     /**
      * True if [combo] becomes fully held at any point while replaying ONE capture [window]'s events from an
      * empty held-set. This is the QA-bar trigger's detection unit: each ~1 s `getevent` window is judged on its
-     * OWN, carrying no held-set across windows. That's the reliability fix — controller buttons are edge-only
+     * OWN, carrying no held-set across windows. That's the reliability fix, controller buttons are edge-only
      * (no autorepeat), so when a release's UP landed in the lock-release gap between windows the old cross-window
      * held-set stayed STALE and `justTriggered` could never re-fire (the "had to press it a few times" bug). A
      * genuine chord emits all its DOWNs together inside one window, so it's caught here; a chord still held into
@@ -62,7 +62,7 @@ object InputComboParser {
     data class StreamChunk(val alive: Boolean, val events: List<KeyEvent>)
 
     /**
-     * Parse one stream read — "OK|<line>~<line>~…" while the producer is alive, "DEAD|…" when its pid check
+     * Parse one stream read, "OK|<line>~<line>~…" while the producer is alive, "DEAD|…" when its pid check
      * failed. A null/blank/markerless read means the read command itself failed (PServer hiccup), treated as
      * not-alive so the watcher re-verifies the producer. Buffered events in a DEAD read are still surfaced
      * (they were captured before the producer died), but the watcher resets its held-set on death anyway.
@@ -76,10 +76,10 @@ object InputComboParser {
 
     /**
      * Fold one stream chunk into the cross-poll held-set. Returns the new held-set and whether [combo]
-     * TRANSITIONED into fully-held inside this chunk — once per press: a chord still held into later chunks
+     * TRANSITIONED into fully-held inside this chunk, once per press: a chord still held into later chunks
      * emits no events, so it cannot re-fire, and a release+re-press fires again. Carrying the held-set across
      * reads is CORRECT here only because the stream capture is lossless (every DOWN/UP edge reaches the file);
-     * the windowed detector must keep using [chordPressedInWindow] — its lossy windows are exactly what made
+     * the windowed detector must keep using [chordPressedInWindow], its lossy windows are exactly what made
      * a carried held-set wedge.
      */
     fun advanceHeld(held: Set<String>, events: List<KeyEvent>, combo: Set<String>): Pair<Set<String>, Boolean> {

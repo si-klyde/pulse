@@ -5,7 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Truth table for [CustomFanGate] — engage Custom (fan_mode=6) when the chip is warm OR active cooling is
+/** Truth table for [CustomFanGate], engage Custom (fan_mode=6) when the chip is warm OR active cooling is
  *  wanted; hand to vendor Smart only when cool + at the floor (death-safe AND quiet). Engage-fast/release-slow. */
 class CustomFanGateTest {
 

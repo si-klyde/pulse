@@ -393,7 +393,7 @@ private fun PerAppConfigDialog(
 
                 if (PerAppConfig.isAuto(profileBinding)) {
                     // AutoTDP owns the refresh rate (pins the panel to max), so the user picks an FPS
-                    // target instead — AutoTDP trims clocks to hold it.
+                    // target instead, AutoTDP trims clocks to hold it.
                     DialogGroupLabel("Frame rate to hold")
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -438,7 +438,7 @@ private fun PerAppConfigDialog(
                 }
 
                 Text(
-                    text = "Applied when this app comes to the foreground; the previous state is restored when it leaves. \"Default\" leaves that control alone. AutoTDP pins the panel to max refresh and trims the CPU then GPU to hold your FPS target at the lowest power; pair it with the global Custom fan on the main screen. \"Default\" target uses the global default, \"Max\" runs uncapped. Custom applies your saved Custom setup — for frequencies unique to this app, save a profile on the main screen and bind it here.",
+                    text = "Applied when this app comes to the foreground; the previous state is restored when it leaves. \"Default\" leaves that control alone. AutoTDP pins the panel to max refresh and trims the CPU then GPU to hold your FPS target at the lowest power; pair it with the global Custom fan on the main screen. \"Default\" target uses the global default, \"Max\" runs uncapped. Custom applies your saved Custom setup, for frequencies unique to this app, save a profile on the main screen and bind it here.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

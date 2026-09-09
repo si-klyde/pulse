@@ -59,7 +59,7 @@ class PerformanceCommandBuilderTest {
         assertTrue(
             script.indexOf("policy6/scaling_min_freq") < script.indexOf("echo 1075200 > /sys/devices/system/cpu/cpufreq/policy6/scaling_max_freq"),
         )
-        // The perf cluster (policy0) is NOT touched — that's what keeps its cap biting.
+        // The perf cluster (policy0) is NOT touched, that's what keeps its cap biting.
         assertTrue(!script.contains("policy0/scaling_min_freq"))
     }
 
@@ -89,7 +89,7 @@ class PerformanceCommandBuilderTest {
     @Test
     fun `prime boost-limit routing lowers and locks the prime min before its no-turbo max, perf untouched`() {
         // Bug 2: setPrimeCoreBoostLimited / reapplyCustomSideControls now route the no-turbo cap through
-        // applyFreqsToDevice(policies, mapOf(primeId to target)) — modelled here as the FULL policy set with
+        // applyFreqsToDevice(policies, mapOf(primeId to target)), modelled here as the FULL policy set with
         // only the prime (policy6) in the freq map and the prime id as the lowerMin target. The no-turbo
         // target is the second-highest OPP (4_320_000 → 3_072_000).
         val script = builder.buildApplyScript(
@@ -126,8 +126,8 @@ class PerformanceCommandBuilderTest {
         // The perf cap is re-asserted and locked read-only.
         assertTrue(script.contains("echo 2745600 > /sys/devices/system/cpu/cpufreq/policy0/scaling_max_freq"))
         assertTrue(script.contains("chmod 444 /sys/devices/system/cpu/cpufreq/policy0/scaling_max_freq"))
-        // The uncapped prime is NOT written at all — neither its min (despite being the lowerMin target) nor its
-        // max — because it has no entry in the freq map. This is what makes re-asserting a partial cap set safe.
+        // The uncapped prime is NOT written at all, neither its min (despite being the lowerMin target) nor its
+        // max, because it has no entry in the freq map. This is what makes re-asserting a partial cap set safe.
         assertTrue(!script.contains("policy6/scaling_min_freq"))
         assertTrue(!script.contains("policy6/scaling_max_freq"))
     }

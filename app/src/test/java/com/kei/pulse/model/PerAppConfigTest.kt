@@ -10,7 +10,7 @@ class PerAppConfigTest {
     @Test
     fun `Odin SoC honors the Game Mode cap and gets its target list`() {
         assertTrue(PerAppConfig.isGameModeCapSoc("CQ8725S"))
-        // 90 + 40 omitted: the Odin panel is 60/120 only, so Android floors a 90 cap to 60 and a 40 to 30 —
+        // 90 + 40 omitted: the Odin panel is 60/120 only, so Android floors a 90 cap to 60 and a 40 to 30,
         // a "90" would silently be 60. Offer only the rates the panel can actually pace.
         assertEquals(listOf(30, 60, 120), PerAppConfig.fpsTargetsFor("CQ8725S"))
     }
@@ -34,8 +34,8 @@ class PerAppConfigTest {
         assertTrue(PerAppConfig.useGameModeCap("CQ8725S", 30, 120))
         assertTrue(PerAppConfig.useGameModeCap("CQ8725S", 60, 120))
         assertTrue(PerAppConfig.useGameModeCap("CQ8725S", 120, 120))
-        assertFalse("90 floors to 60 on a 120 Hz panel — not a clean cap", PerAppConfig.useGameModeCap("CQ8725S", 90, 120))
-        // Thor/RP6 never use the Game Mode cap (firmware doesn't honor it) — they take the refresh path.
+        assertFalse("90 floors to 60 on a 120 Hz panel, not a clean cap", PerAppConfig.useGameModeCap("CQ8725S", 90, 120))
+        // Thor/RP6 never use the Game Mode cap (firmware doesn't honor it), they take the refresh path.
         assertFalse(PerAppConfig.useGameModeCap("QCS8550", 60, 120))
     }
 
@@ -67,7 +67,7 @@ class PerAppConfigTest {
         repeat(30) { c = c.foldMeasuredDraw(7f, active = true) }
         assertEquals(7f, c.measuredPeakW, 0.01f)
         assertEquals(7f, c.measuredAvgW, 0.1f)
-        // A long idle/paused stretch at ~0.5 W must NOT drag either figure — the bug that made a 7 W game
+        // A long idle/paused stretch at ~0.5 W must NOT drag either figure, the bug that made a 7 W game
         // read as ≈13 h of runtime.
         repeat(200) { c = c.foldMeasuredDraw(0.5f, active = false) }
         assertEquals("idle avg frozen out", 7f, c.measuredAvgW, 0.1f)

@@ -201,7 +201,7 @@ private fun ThermalTag() {
     )
 }
 
-// True if ANY of [e] is in the enabled set — used to skip a row entirely when none of its items show.
+// True if ANY of [e] is in the enabled set, used to skip a row entirely when none of its items show.
 private fun Set<OverlayElement>.any(vararg e: OverlayElement): Boolean = e.any { it in this }
 
 @Composable
@@ -418,7 +418,7 @@ private fun isThrottling(t: TelemetrySnapshot): Boolean =
 private fun tempColor(c: Int?): Color = meterTempColor(c)
 private fun loadColor(p: Int?): Color = meterLoadColor(p)
 
-// AutoTDP caps: a trimmed domain (below 100 %) is the savings — sage; full clocks stay ink.
+// AutoTDP caps: a trimmed domain (below 100 %) is the savings, sage; full clocks stay ink.
 private fun capColor(percent: Int): Color = if (percent >= 100) OsdInk else MeterCool
 
 private fun formatTimer(ms: Long): String {

@@ -238,7 +238,7 @@ fun MainTunerScreen(
                 CurrentFrequenciesCard(state = state)
 
                 // AutoTDP manages the governor + clocks itself; the fan stays user-configurable but only
-                // Custom is honoured in-session (cascaded), every other mode runs as Smart — the module
+                // Custom is honoured in-session (cascaded), every other mode runs as Smart, the module
                 // says so while AutoTDP is on. Only the governor hides while AutoTDP is on.
                 if (!hideAutoTdp) FanModule(currentMode = fanMode, onSelect = onSelectFanMode, editor = fanCurveEditor, autoTdpOn = autoTdpEnabled)
                 if (!autoTdpEnabled) {
@@ -1162,7 +1162,7 @@ private fun PrimeBoostLimitRow(limited: Boolean, onToggle: (Boolean) -> Unit) {
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = "Caps the top frequency bin — trades peak spikes for cooler, sustained performance.",
+                text = "Caps the top frequency bin, trades peak spikes for cooler, sustained performance.",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

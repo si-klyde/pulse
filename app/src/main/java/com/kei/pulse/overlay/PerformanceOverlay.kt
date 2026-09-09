@@ -114,7 +114,7 @@ class PerformanceOverlay(private val context: Context) {
     fun toggleLock() {
         val locked = !configFlow.value.locked
         setConfig(configFlow.value.copy(locked = locked))
-        // Tell the owner so its lock state (and notification text) tracks the in-overlay button —
+        // Tell the owner so its lock state (and notification text) tracks the in-overlay button,
         // otherwise the service's copy goes stale and the next config push reverts the user's tap.
         onLockToggled?.invoke(locked)
     }
@@ -131,7 +131,7 @@ class PerformanceOverlay(private val context: Context) {
 
     private fun moveBy(dx: Float, dy: Float) {
         main.post {
-            // The docked Compact bar is pinned full-width to the top — not draggable.
+            // The docked Compact bar is pinned full-width to the top, not draggable.
             if (isDocked(configFlow.value)) return@post
             val lp = params ?: return@post
             // Clamp to the screen so the HUD can't be dragged fully off-edge (and that off-screen

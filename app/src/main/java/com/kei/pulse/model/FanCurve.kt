@@ -17,15 +17,15 @@ data class FanCurve(val points: List<FanCurvePoint>) {
 
     /**
      * Fan % for [tempC], read off a SMOOTH monotone-cubic (Fritsch–Carlson) spline through the points, then
-     * clamped to the safe range. The spline rounds the corners a straight-segment curve would have — so the
-     * fan response is smooth — while *preserving monotonicity* (it never dips or overshoots between knees,
+     * clamped to the safe range. The spline rounds the corners a straight-segment curve would have, so the
+     * fan response is smooth, while *preserving monotonicity* (it never dips or overshoots between knees,
      * even with only a few points). Held flat below the first / above the last knee. With ≤2 points it
      * degenerates to a straight line.
      */
     fun percentFor(tempC: Int): Int = splineAt(tempC.toDouble()).roundToInt().coerceIn(MIN_PERCENT, 100)
 
     /**
-     * Float-precision spline value (clamped) — same curve as [percentFor] but un-rounded, for DRAWING a smooth
+     * Float-precision spline value (clamped), same curve as [percentFor] but un-rounded, for DRAWING a smooth
      * line. Sampling the integer [percentFor] gives a visibly stair-stepped line; this doesn't.
      */
     fun percentForExact(tempC: Float): Float =
@@ -111,7 +111,7 @@ data class FanCurve(val points: List<FanCurvePoint>) {
         fun percentToDuty(percent: Int, period: Int): Int =
             (period * percent.coerceIn(MIN_PERCENT, 100)) / 100
 
-        /** Move [current] toward [target] by at most [stepPercent] — the response-smoothing lever. */
+        /** Move [current] toward [target] by at most [stepPercent], the response-smoothing lever. */
         fun easePercent(current: Int, target: Int, stepPercent: Int): Int {
             val step = stepPercent.coerceAtLeast(1)
             return when {

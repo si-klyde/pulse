@@ -8,10 +8,10 @@ import kotlin.math.pow
  * A small, self-calibrating power model for one SoC, learned while AutoTDP runs.
  *
  * Snapdragon exposes no power API, so the only draw signal is the battery's
- * `current_now × voltage_now` (valid on discharge). That's a *total system* draw — it can't be split
+ * `current_now × voltage_now` (valid on discharge). That's a *total system* draw, it can't be split
  * into CPU vs GPU in a single reading. The trick: **AutoTDP changes exactly one clock domain per
  * step**, so the draw delta measured across a single-domain step attributes cleanly to that domain.
- * Accumulating those deltas teaches this device's **CPU/GPU power split** — which then makes the
+ * Accumulating those deltas teaches this device's **CPU/GPU power split**, which then makes the
  * "EST PK" estimate and AutoTDP's trim choices reflect the real silicon instead of a fixed guess.
  *
  * Only the split is learned here (it's the robust, unbiased quantity from noisy single-draw readings);

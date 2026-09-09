@@ -139,34 +139,34 @@ data class TelemetrySnapshot(
     val cpuClocksMhz: Map<Int, Int> = emptyMap(),
     /** All-core CPU load, capacity-weighted: busy time × current/boost-max clock per core. */
     val cpuLoadPercent: Int? = null,
-    /** Per-logical-core busy %, ordered by core id — for the overlay's per-core histogram. */
+    /** Per-logical-core busy %, ordered by core id, for the overlay's per-core histogram. */
     val cpuCoreLoadsPercent: List<Int> = emptyList(),
     /**
-     * Aggregate CPU iowait % (time blocked on disk I/O). Logged as a diagnostic only — on this platform it
+     * Aggregate CPU iowait % (time blocked on disk I/O). Logged as a diagnostic only, on this platform it
      * reads ~0 even under heavy loads (per-core iowait is unreliable on Android, and emulator loads are
      * container/GPU/network-bound, not disk-bound), so parking gates on continuous-render instead.
      */
     val cpuIowaitPercent: Int? = null,
     val gpuMhz: Int? = null,
     /**
-     * The GPU's live ceiling (MHz) read back from `max_pwrlevel` — the fastest the GPU is ALLOWED to run
+     * The GPU's live ceiling (MHz) read back from `max_pwrlevel`, the fastest the GPU is ALLOWED to run
      * right now. Diagnostic for the media GPU-pin (Batch 4): if PULSE caps the GPU low but this reads back
      * near the top, the vendor daemon has reverted `max_pwrlevel` to level 0.
      */
     val gpuCeilingMhz: Int? = null,
-    /** Raw `max_pwrlevel`/`min_pwrlevel` indices (fastest = 0) the device currently holds — daemon-revert proof. */
+    /** Raw `max_pwrlevel`/`min_pwrlevel` indices (fastest = 0) the device currently holds, daemon-revert proof. */
     val gpuMaxLevel: Int? = null,
     val gpuMinLevel: Int? = null,
-    /** Raw kgsl busy %, relative to the CURRENT clock — used for the calibration gate. */
+    /** Raw kgsl busy %, relative to the CURRENT clock, used for the calibration gate. */
     val gpuBusyPercent: Int? = null,
-    /** Busy % weighted by current/max clock — utilisation of full GPU capacity, for display. */
+    /** Busy % weighted by current/max clock, utilisation of full GPU capacity, for display. */
     val gpuLoadPercent: Int? = null,
     val batteryPercent: Int? = null,
     val cpuTempC: Int? = null,
     val gpuTempC: Int? = null,
     val batteryDrawMa: Int? = null,
     val batteryDrawW: Float? = null,
-    /** False while charging/full — current_now then reads charger current, not system draw. */
+    /** False while charging/full, current_now then reads charger current, not system draw. */
     val isDischarging: Boolean = true,
     val ramUsedMb: Int? = null,
     val ramTotalMb: Int? = null,
@@ -177,7 +177,7 @@ data class TelemetrySnapshot(
  * Reads live clocks / GPU load / battery / temps / draw. Best-effort: missing nodes read null.
  *
  * Every value is read with its own single `cat`, and the thermal-zone scan is the sequential
- * loop — both verbatim from the last build verified on-device. Do NOT batch these reads into
+ * loop, both verbatim from the last build verified on-device. Do NOT batch these reads into
  * combined PServer commands or "optimise" the zone scan: both were tried and silently broke
  * CPU temperature on all three target devices (PServer's combined-stdout reply format is not
  * reliable on this firmware).
@@ -198,11 +198,11 @@ class TelemetryReader {
      * Total CPU load as "% of the max it can do": each core's busy-time fraction (from
      * /proc/stat deltas between polls) weighted by its cluster's current clock over its
      * observed boost ceiling, averaged across cores. Busy cores at half clock read ~50%,
-     * not 100 — so the number honestly reflects boost headroom and user caps alike.
+     * not 100, so the number honestly reflects boost headroom and user caps alike.
      * Null on the first poll (a delta needs two samples).
      */
     /**
-     * Fetches just the cpu lines of /proc/stat. Never reads the whole file through PServer —
+     * Fetches just the cpu lines of /proc/stat. Never reads the whole file through PServer,
      * its reply silently fails on large outputs and the full file (intr line) can be 10KB+.
      * Tries a direct file read first (free when SELinux allows), then small PServer commands.
      */
@@ -328,7 +328,7 @@ class TelemetryReader {
                 ?.let { hz -> (hz / 1_000_000L).toInt() }
         }
         // Read back the live pwrlevel bounds (fastest = 0). The ceiling MHz comes from mapping max_pwrlevel
-        // through the GPU's ascending freq table — same mapping the writer uses. Diagnostic for Batch 4.
+        // through the GPU's ascending freq table, same mapping the writer uses. Diagnostic for Batch 4.
         val gpuMaxLevel = gpuRoot?.let { cat("$it/max_pwrlevel")?.toIntOrNull() }
         val gpuMinLevel = gpuRoot?.let { cat("$it/min_pwrlevel")?.toIntOrNull() }
         val gpuCeilingMhz = gpuPolicy?.supportedFrequencies
@@ -393,7 +393,7 @@ class TelemetryReader {
  * no power-prediction API, so this is a heuristic: each CPU cluster contributes ∝ cores × cap^EXP
  * weighted by its clock class, the GPU a flat share, normalised so all-uncapped ≈ [DEFAULT_PEAK_W].
  * The superlinear EXP reflects voltage rising with frequency, so capping the top bins saves
- * disproportionate power. It's a directional figure, not a lab measurement — always label it "est".
+ * disproportionate power. It's a directional figure, not a lab measurement, always label it "est".
  */
 object PowerEstimator {
     private const val EXP = 2.2
@@ -434,24 +434,24 @@ class CpuFloorController {
      * Raise each non-prime cluster's `scaling_min` to a percentage of its max, or (on `percent <= 0`)
      * reset every cluster's min to its lowest OPP.
      *
-     * Lock discipline — this is deliberately PRIME-EXCLUSIVE on a raise (approach A):
+     * Lock discipline, this is deliberately PRIME-EXCLUSIVE on a raise (approach A):
      *  - The PRIME cluster's `scaling_min` is owned exclusively by the cap apply path (it lowers the prime
      *    min and `chmod 444`-locks it so the vendor perflock daemon can't re-raise it and clamp the prime
      *    `scaling_max` cap back up). Writing the prime min here at writable-644 would RELEASE that 444 lock,
      *    and if the floor% exceeded the cap% it would raise the prime min above the prime cap → the kernel
      *    clamps the prime `scaling_max` back UP and the cap silently breaks. The prime can't be meaningfully
      *    frequency-floored on this SoC anyway (the HAL pins its min ~3 GHz mid-game), so we skip it entirely.
-     *  - Every other cluster's floor target is clamped to `min(floorTarget, currentScalingMax)` — read live —
+     *  - Every other cluster's floor target is clamped to `min(floorTarget, currentScalingMax)`, read live,
      *    so a floor can never raise that cluster's min above its own cap (which the kernel would otherwise
      *    reject / clamp the cap up to satisfy). We only touch each cluster's min (writable 644), never its
      *    max, so the perf cap keeps biting.
      *  - On reset (`percent <= 0`) every CPU cluster's min (prime included) goes back to its lowest OPP, as
-     *    before — clearing a floor must hand min control fully back.
+     *    before, clearing a floor must hand min control fully back.
      */
     fun setFloor(policies: List<CpuPolicyInfo>, percent: Int): Boolean {
         val cpu = policies.filterNot { it.isGpu }
         if (cpu.isEmpty()) return false
-        // Clearing the floor resets every cluster (incl. prime) to its lowest OPP — unchanged behaviour.
+        // Clearing the floor resets every cluster (incl. prime) to its lowest OPP, unchanged behaviour.
         if (percent <= 0) {
             val cmd = cpu.joinToString("; ") { p ->
                 val path = "${p.policyPath}/scaling_min_freq"
@@ -462,14 +462,14 @@ class CpuFloorController {
         }
         // Raise: skip the PRIME (its min is the cap apply's 444-locked node) and clamp the rest to <= cap.
         val cmd = floorableClusters(cpu).joinToString("; ") { p ->
-            // Never raise this cluster's min above its current cap (scaling_max) — that would make the
+            // Never raise this cluster's min above its current cap (scaling_max), that would make the
             // kernel clamp the cap back up. Live-read the cap; fall back to the requested floor if absent.
             val cap = cat("${p.policyPath}/scaling_max_freq")?.toIntOrNull()
             val target = floorTargetFor(p, percent, cap)
             val path = "${p.policyPath}/scaling_min_freq"
             "chmod 666 $path; echo $target > $path; chmod 644 $path"
         }
-        if (cmd.isBlank()) return true // only a prime cluster exists (nothing safe to floor) — no-op success
+        if (cmd.isBlank()) return true // only a prime cluster exists (nothing safe to floor), no-op success
         RootSupport.runRootCommand(cmd)
         return true
     }

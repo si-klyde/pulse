@@ -18,7 +18,7 @@ class BootCompletedReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         when (intent?.action) {
             Intent.ACTION_BOOT_COMPLETED -> restartManagedState(context, applyBootValues = true)
-            // A package UPDATE kills the process WITHOUT onDestroy — the watcher (and a Custom fan left in
+            // A package UPDATE kills the process WITHOUT onDestroy, the watcher (and a Custom fan left in
             // manual passthrough, fan_mode=6) stayed down/STRANDED until the app was manually reopened
             // (observed live on the Thor: install -r mid-Custom-fan → duty pinned, nothing driving it). Run
             // the same restart rule as boot; only a real boot re-applies the persisted boot values.

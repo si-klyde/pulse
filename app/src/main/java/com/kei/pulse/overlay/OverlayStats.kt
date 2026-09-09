@@ -3,7 +3,7 @@ package com.kei.pulse.overlay
 import com.kei.pulse.data.FpsReader
 import com.kei.pulse.data.TelemetrySnapshot
 
-/** Everything the in-game overlay renders — pushed by the watcher's feed each poll. */
+/** Everything the in-game overlay renders, pushed by the watcher's feed each poll. */
 data class OverlayStats(
     val telemetry: TelemetrySnapshot = TelemetrySnapshot(),
     val fps: FpsReader.FpsSample? = null,
@@ -26,7 +26,7 @@ data class OverlayStats(
     val volumePercent: Int? = null,
     /** The Adreno's supported frequencies (kHz, ascending) for the Quick Access GPU-cap stepper; null if unread. */
     val gpuLevels: List<Int>? = null,
-    /** The Adreno's LIVE current max (kHz) read back from the device — the stepper's source of truth. */
+    /** The Adreno's LIVE current max (kHz) read back from the device, the stepper's source of truth. */
     val gpuCapKhz: Int? = null,
     /** Label of the game in front (from the live session), for the Quick Access header. */
     val gameLabel: String? = null,
@@ -35,7 +35,7 @@ data class OverlayStats(
 /** Below this smoothed draw (W), a battery time-left estimate is meaningless (paused game ≈ 0 W → "200h"). */
 const val MIN_LEFT_WATTS = 0.5f
 
-/** Display step (min) for the battery time-left readout — quantized so it doesn't flicker by a minute. */
+/** Display step (min) for the battery time-left readout, quantized so it doesn't flicker by a minute. */
 const val MINUTES_DISPLAY_STEP = 5
 
 /** EMA weight for the battery-minutes smoothing at the ~1 s overlay cadence (≈20 s time constant). */
@@ -43,7 +43,7 @@ const val MINUTES_SMOOTH_ALPHA = 0.05f
 
 /**
  * Output-domain smoothing for the battery time-left readout. time-left = capacity / draw, and dividing by a
- * small noisy draw amplifies the jitter into big jumps in the displayed minutes — so we EMA the **minutes**
+ * small noisy draw amplifies the jitter into big jumps in the displayed minutes, so we EMA the **minutes**
  * (a slow ~20-30 s constant; this is a glanceable, slow-moving quantity) rather than slowing the draw EMA
  * (which would also lag the live wattage readout). Returns the updated EMA to carry across ticks; a null
  * [rawMinutes] (charging/paused/untrusted) drops the state so it re-seeds cleanly on the next real reading.

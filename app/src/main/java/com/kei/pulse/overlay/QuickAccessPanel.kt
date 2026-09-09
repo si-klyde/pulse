@@ -74,7 +74,7 @@ private class NavItem(
 /** A titled group of items in the single column; the bumpers jump between groups. */
 private class NavGroup(val title: String, val status: String?, val items: List<NavItem>)
 
-/** Root of the Quick Access overlay content — a collapsed handle, or the expanded right-docked panel. */
+/** Root of the Quick Access overlay content, a collapsed handle, or the expanded right-docked panel. */
 @Composable
 fun QuickAccessContent(
     statsFlow: StateFlow<OverlayStats>,
@@ -117,7 +117,7 @@ private fun QuickAccessHandle(onExpand: () -> Unit) {
 }
 
 /**
- * The panel: one column ordered by how often it's reached for mid-game — brightness and volume first, then
+ * The panel: one column ordered by how often it's reached for mid-game, brightness and volume first, then
  * Power (Auto | Manual | Off, frame rate, lean), Fan, Overlay, Lights. No tab rail: the D-pad walks straight
  * down, the bumpers jump between groups, and a thumb never hunts for a tab.
  */
@@ -139,7 +139,7 @@ private fun QuickAccessPanel(
     var flashKey by remember { mutableIntStateOf(0) }
     val showFlash: (String) -> Unit = { flash = it; flashKey++ }
     LaunchedEffect(flashKey) { if (flash != null) { kotlinx.coroutines.delay(FLASH_MS); flash = null } }
-    // The scope control's UNCOMMITTED ←/→ selection (browsing must never apply — committing "All games"
+    // The scope control's UNCOMMITTED ←/→ selection (browsing must never apply, committing "All games"
     // deletes the game's profile, so it takes an explicit A press / tap).
     var pendingScope by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(settings.quickAccessPerGameScope) { pendingScope = null }
@@ -276,7 +276,7 @@ private fun Header(
                                         when {
                                             toPerGame && perApp == null -> "Per-game profile created"
                                             toPerGame -> "Editing this game's profile"
-                                            perApp != null -> "Profile removed — following All games"
+                                            perApp != null -> "Profile removed, following All games"
                                             else -> "Following All games"
                                         },
                                     )
@@ -521,7 +521,7 @@ private fun flashLabel(a: QuickAccessAction, autoTdpLive: Boolean): String? = wh
     is QuickAccessAction.SetAggressivePark -> if (a.enabled) "Aggressive park on" else "Aggressive park off"
     is QuickAccessAction.SetFanMode -> {
         val label = "Fan ${FanController.labelFor(a.mode)}"
-        if (QuickAccessPerApp.fanModeDeferredByAutoTdp(autoTdpLive, a.mode)) "$label — after Auto" else label
+        if (QuickAccessPerApp.fanModeDeferredByAutoTdp(autoTdpLive, a.mode)) "$label, after Auto" else label
     }
     is QuickAccessAction.SetFanSmart -> if (a.enabled) "Holding target temp" else "Manual curve"
     is QuickAccessAction.SetFanTargetTemp -> "Target ${a.tempC} °C"

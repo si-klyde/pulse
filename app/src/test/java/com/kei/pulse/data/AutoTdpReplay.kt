@@ -12,7 +12,7 @@ import com.kei.pulse.data.AutoTdpLogParser.TickRecord
  *
  * **Open-loop only.** This answers *"does my change alter which action/caps the controller produces on this
  * real session?"* (decision-logic regression). It does NOT predict the new policy's resulting fps/temp/power
- * — those would be the device's closed-loop response to different actions, which isn't in the recording.
+ *, those would be the device's closed-loop response to different actions, which isn't in the recording.
  * Never read a replayed trajectory as an fps prediction.
  *
  * Caveats on the recorded-vs-replayed comparison: the replay is **seeded from the recorded opening caps** so it
@@ -56,7 +56,7 @@ object AutoTdpReplay {
     /** Replay a parsed capture; requires the one-shot `AUTOTDP-SESSION` header (controller config + policies). */
     fun replay(capture: ParsedCapture): Result {
         val header = requireNotNull(capture.header) {
-            "capture has no AUTOTDP-SESSION header — re-capture with a build that emits it (AUTO_DEBUG on)"
+            "capture has no AUTOTDP-SESSION header, re-capture with a build that emits it (AUTO_DEBUG on)"
         }
         val controller = AutoTuneController(
             writeCaps = { _, _ -> },
@@ -67,10 +67,10 @@ object AutoTdpReplay {
             bias = header.bias
             wattCapAndSettleEnabled = header.wattCapAndSettle
         }
-        // Seed from the recorded opening caps so the replay starts where the recording did — otherwise a
+        // Seed from the recorded opening caps so the replay starts where the recording did, otherwise a
         // session warm-started to TRIMMED caps and RAISING back replays degenerately (a fresh controller at
         // MAX caps has nothing to raise into ⇒ all-HOLD). One-tick offset: the logged caps are POST-decision,
-        // so tick 0 is seeded with its own result — acceptable for decision-regression.
+        // so tick 0 is seeded with its own result, acceptable for decision-regression.
         capture.ticks.firstOrNull()?.let { controller.warmStart(header.policies, it.recordedCaps) }
         val outcomes = capture.ticks.mapIndexed { i, t ->
             val action = stepOf(controller, header.policies, t).action.name

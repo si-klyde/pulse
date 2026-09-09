@@ -38,8 +38,8 @@ class PowerModelTest {
     fun ignoresNoiseSpikesAndZeroDeltas() {
         var m = PowerModel(soc = "TEST")
         m = m.observe(Domain.CPU, 0f)      // no change
-        m = m.observe(Domain.CPU, -1f)     // draw went up (load shift) — ignore
-        m = m.observe(Domain.CPU, 99f)     // implausible spike — ignore
+        m = m.observe(Domain.CPU, -1f)     // draw went up (load shift), ignore
+        m = m.observe(Domain.CPU, 99f)     // implausible spike, ignore
         assertEquals(0, m.splitSamples)
     }
 

@@ -9,7 +9,7 @@ import org.junit.Test
 /**
  * Pure-logic tests for [CpuFloorController]'s prime-skip + cap-clamp discipline (Bug 1). The device
  * write itself goes through RootSupport (verified on hardware), but the two decisions that make the
- * floor cap-safe — which clusters are floorable, and what each floor target is — are pure and tested here.
+ * floor cap-safe, which clusters are floorable, and what each floor target is, are pure and tested here.
  */
 class CpuFloorControllerTest {
 

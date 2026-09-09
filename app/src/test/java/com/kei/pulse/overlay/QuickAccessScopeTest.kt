@@ -164,7 +164,7 @@ class QuickAccessScopeTest {
 
     @Test
     fun `committing per-game keeps an existing profile untouched`() {
-        // The game already has its own profile — Per-Game just points future edits at it (no data loss).
+        // The game already has its own profile, Per-Game just points future edits at it (no data loss).
         val profile = PerAppConfig(packageName = "g", profileBinding = PerAppConfig.tierBinding(PowerTier.MAX), fpsTarget = 90)
         assertEquals(
             QuickAccessScope.ScopeCommit.FlagOnly,
@@ -219,7 +219,7 @@ class QuickAccessScopeTest {
 
     @Test
     fun `every seeded profile has a binding so saveConfig keeps it`() {
-        // PerAppConfigStorage.saveConfig drops a config with no binding (soft delete) — a seeded profile with
+        // PerAppConfigStorage.saveConfig drops a config with no binding (soft delete), a seeded profile with
         // hasAnyBinding=false would silently vanish, making the Per-Game commit a no-op.
         listOf(
             base.copy(autoTdpDefaultEnabled = true),

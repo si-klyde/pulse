@@ -4,7 +4,7 @@ package com.kei.pulse.model
  * Pure, device-free resolver for the side-control UI state after a power-tier transition.
  *
  * These are the knobs that [com.kei.pulse.ui.TunerViewModel.applyTier] historically set by
- * hand-copying a scatter of `MutableStateFlow` assignments — the exact place state-restoration bugs
+ * hand-copying a scatter of `MutableStateFlow` assignments, the exact place state-restoration bugs
  * slip past a green build: a transition that releases/clears device tuning but forgets to mirror it
  * in the "current values" UI, leaving the readout diverged from real sysfs. Centralizing the
  * contract here makes those omissions a single, unit-tested source of truth.
@@ -54,7 +54,7 @@ object TierTransition {
 
     /**
      * Side-control state after switching to CUSTOM: restore every saved knob. A [CustomTuning] flag
-     * with no mapping here is a restoration bug — the saved value would be silently dropped.
+     * with no mapping here is a restoration bug, the saved value would be silently dropped.
      */
     fun afterCustomRestore(saved: CustomTuning): SideControlState = SideControlState(
         powerTargetEnabled = saved.powerTargetEnabled,
@@ -69,7 +69,7 @@ object TierTransition {
     // --- Individual side-control toggles (the per-control interlink matrix) ---
 
     /**
-     * After toggling the GPU clock lock. Locking CLEARS the GPU floor — both pin the GPU's min power level,
+     * After toggling the GPU clock lock. Locking CLEARS the GPU floor, both pin the GPU's min power level,
      * and the lock (pin-to-current) wins, so leaving a stale floor would diverge the UI from the device.
      * Unlocking leaves the floor as the user's value.
      */
@@ -86,7 +86,7 @@ object TierTransition {
 
     /**
      * After setting the GPU floor percentage. Note: this does NOT clear the GPU lock (current behavior is
-     * asymmetric — lock clears floor, floor does not clear lock); encoded faithfully, not changed here.
+     * asymmetric, lock clears floor, floor does not clear lock); encoded faithfully, not changed here.
      */
     fun afterGpuFloor(current: SideControlState, percent: Int): SideControlState =
         current.copy(gpuFloorPercent = percent)

@@ -24,7 +24,7 @@ class FanCurveTest {
 
     @Test fun `interpolates with a smooth spline, not straight lines`() {
         // Monotone-cubic spline through (30,40)(50,50)(80,80)(90,100): at 65 the curved line reads 62,
-        // not the straight-segment 65 — that's the smoothing the user wanted.
+        // not the straight-segment 65, that's the smoothing the user wanted.
         assertEquals(62, curve.percentFor(65))
     }
 
